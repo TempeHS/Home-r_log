@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Home(r)_Log{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <form id="entryForm">
+        <div class="form-group mb-3">
+            <label for="project" class="form-label">project</label>
+            <input type="text" 
+                   class="form-control" 
+                   id="project" 
+                   list="projectList" 
+                   autocomplete="off"
+                   placeholder="Select or type project name"
+                   required>
+            <datalist id="projectList"></datalist>
+        </div>
+        <div class="form-group mb-3">
+            <label for="content" class="form-label">content</label>
+            <textarea class="form-control" 
+                      id="content" 
+                      name="content"
+                      rows="3" 
+                      required
+                      minlength="1"
+                      placeholder="Enter log content"></textarea>
+        </div>
+        <div class="form-group mb-3">
+            <label for="repository_url" class="form-label">repository url</label>
+            <input type="url" 
+                   class="form-control" 
+                   id="repository_url" 
+                   placeholder="https://github.com/username/repository"
+                   required>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="start_time" class="form-label">start time</label>
+                    <input type="datetime-local" 
+                           class="form-control" 
+                           id="start_time" 
+                           required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="end_time" class="form-label">end time</label>
+                    <input type="datetime-local" 
+                           class="form-control" 
+                           id="end_time" 
+                           required>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary mt-3">create Entry</button>
+    </form>
+</div>
+    
+<div class="container mt-4">
+    <div class="d-grid gap-2 col-6 mx-auto">
+        <a href="{{ url_for('search') }}" class="btn search-link btn-lg">
+            search entries
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block message_box %}
+<div class="container mt-4">
+    <div class="message-box">
+        <p class="mono-text">new_entry :: what'd_ya_do?</p>
+    </div>
+</div>
+{% endblock %}
