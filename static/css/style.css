@@ -101,7 +101,7 @@ h1, h2, h3, h4, h5, h6,
 .form-control {
     background-color: var(--darker);
     border: 1px solid var(--border);
-    color: var(--white) !important;
+    color: var (--white) !important;
     border-radius: 0.5rem;
 }
 
@@ -145,6 +145,20 @@ h1, h2, h3, h4, h5, h6,
 .btn-primary:hover {
     background-color: var(--orange);
     border-color: var(--orange);
+    color: var(--white);
+}
+
+/* Logout button styling */
+.btn-logout {
+    background-color: #dc3545; /* Bootstrap's danger color */
+    border-color: #dc3545;
+    color: var(--white);
+    font-weight: 500;
+}
+
+.btn-logout:hover {
+    background-color: #c82333; /* Darker red for hover */
+    border-color: #bd2130;
     color: var(--white);
 }
 
@@ -247,7 +261,7 @@ small,
 
 .sort-controls:focus {
     background-color: var(--darker);
-    color: var(--white);
+    color: var (--white);
     border-color: var(--orange);
 }
 
@@ -272,4 +286,41 @@ small,
     position: sticky;
     top: 20px;
     height: fit-content;
+}
+
+/* Project specific styles */
+.project-card {
+    transition: transform 0.2s ease;
+}
+
+.project-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--yellow);
+}
+
+.project-description {
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+}
+
+.project-metadata {
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+    margin-top: 1rem;
+}
+
+.team-members {
+    margin-top: 1rem;
+}
+
+.team-members .badge {
+    background-color: var(--card);
+    color: var(--yellow);
+    border: 1px solid var(--border);
+    font-size: 0.9rem;
+    padding: 0.5rem;
+}
+
+.sticky-top {
+    top: 1rem;
 }

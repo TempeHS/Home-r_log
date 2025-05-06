@@ -6,6 +6,12 @@ import secrets
 
 db = SQLAlchemy()
 
+# Updated association table to use project name instead of id
+project_members = db.Table('project_members',
+    db.Column('project_name', db.String(100), db.ForeignKey('project.name')),
+    db.Column('user_id', db.String(50), db.ForeignKey('user.developer_tag'))
+)
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -28,26 +34,47 @@ class User(UserMixin, db.Model):
         self.api_enabled = True
         return self.api_key
 
+class Project(db.Model):
+    name = db.Column(db.String(100), primary_key=True)
+    description = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.String(50), db.ForeignKey('user.developer_tag'), nullable=False)
+    
+    # Relationships
+    team_members = db.relationship('User', secondary=project_members,
+                                 backref=db.backref('projects', lazy='dynamic'))
+    entries = db.relationship('LogEntry', backref='project', lazy='dynamic')
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'description': self.description,
+            'created_at': self.created_at.isoformat(),
+            'created_by': self.created_by,
+            'team_members': [member.developer_tag for member in self.team_members],
+            'entry_count': self.entries.count()
+        }
+
 class LogEntry(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    project = db.Column(db.String(100), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    repository_url = db.Column(db.String(500))
+    repository_url = db.Column(db.String(500))  # Kept for tracking code changes
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
     time_worked = db.Column(db.Integer)  # Store minutes
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     developer_tag = db.Column(db.String(50), db.ForeignKey('user.developer_tag'), nullable=False)
+    project_name = db.Column(db.String(100), db.ForeignKey('project.name'), nullable=False)
 
     def to_dict(self):
         return {
             'id': self.id,
-            'project': self.project,
             'content': self.content,
             'repository_url': self.repository_url,
             'start_time': self.start_time.isoformat(),
             'end_time': self.end_time.isoformat(),
             'time_worked': self.time_worked,
             'timestamp': self.timestamp.isoformat(),
-            'developer_tag': self.developer_tag
+            'developer_tag': self.developer_tag,
+            'project_name': self.project_name
         }

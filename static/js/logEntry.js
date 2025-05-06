@@ -57,9 +57,34 @@ export class LogEntry {
     }
 
     bindEvents() {
-        document.getElementById('newEntryForm').addEventListener('submit', (e) => {
+        document.getElementById('newEntryForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            this.createEntry();
+            
+            const formData = {
+                project_name: document.getElementById('project').value,
+                content: document.getElementById('content').value,
+                repository_url: document.getElementById('repository_url').value,
+                start_time: document.getElementById('start_time').value,
+                end_time: document.getElementById('end_time').value
+            };
+        
+            try {
+                const response = await fetch('/api/entries', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+        
+                if (!response.ok) throw new Error('Failed to create entry');
+        
+                const result = await response.json();
+                window.location.href = `/projects/${formData.project_name}`;
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to create entry');
+            }
         });
 
         document.getElementById('searchButton').addEventListener('click', () => {

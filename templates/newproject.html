@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Create New Project</h2>
+                </div>
+                <div class="card-body">
+                    <form id="newProjectForm" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="projectName" class="form-label">Project Name</label>
+                            <input type="text" class="form-control" id="projectName" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="projectDescription" class="form-label">Project Description</label>
+                            <textarea class="form-control" id="projectDescription" name="description" rows="4" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="teamMembers" class="form-label">Team Members</label>
+                            <select class="form-control" id="teamMembers" name="team_members" multiple required>
+                                {% for user in users %}
+                                <option value="{{ user.developer_tag }}">{{ user.developer_tag }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create Project</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

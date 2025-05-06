@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Projects</h1>
+        <a href="{{ url_for('new_project') }}" class="btn btn-primary">
+            new_project()
+        </a>
+    </div>
+
+    <div class="row">
+        {% for project in projects %}
+        <div class="col-md-6 mb-4">
+            <div class="card project-card h-100">
+                <div class="card-body">
+                    <h2 class="card-title">
+                        <a href="{{ url_for('view_project', project_name=project.name) }}" class="text-decoration-none">
+                            {{ project.name }}
+                        </a>
+                    </h2>
+                    <p class="project-description">{{ project.description }}</p>
+                    <div class="project-metadata">
+                        <small class="text-muted">Created by: {{ project.created_by }}</small>
+                        <small class="text-muted ms-3">{{ project.created_at.strftime('%Y-%m-%d') }}</small>
+                    </div>
+                    <div class="team-members mt-3">
+                        <h6>Team:</h6>
+                        {% for member in project.team_members %}
+                        <span class="badge bg-secondary me-1">{{ member.developer_tag }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
