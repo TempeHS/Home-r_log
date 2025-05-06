@@ -83,6 +83,24 @@ h1, h2, h3, h4, h5, h6,
     border-radius: 0.5rem;
 }
 
+.entry-preview .card {
+    transition: transform 0.2s ease, border-color 0.2s ease;
+    border: 1px solid var(--bs-border-color);
+}
+
+.entry-preview .card:hover {
+    transform: translateY(-2px);
+    border-color: var(--bs-primary);
+}
+
+.entry-preview h4 {
+    color: var(--bs-primary);
+}
+
+.entry-preview .card-header {
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+}
+
 /* content */
 .card-body {
     color: var(--white);
@@ -95,6 +113,12 @@ h1, h2, h3, h4, h5, h6,
 .project {
     color: var(--yellow) !important;
     font-weight: 500;
+}
+
+.developer-tag {
+    font-family: 'Roboto Mono', monospace;
+    color: var(--bs-primary);
+    font-size: 0.9rem;
 }
 
 /* forms */
@@ -184,6 +208,11 @@ h1, h2, h3, h4, h5, h6,
 .entry-preview:hover {
     border-color: var(--yellow);
     transform: translateY(-2px);
+}
+
+.entry-content {
+    color: var(--bs-secondary);
+    margin-bottom: 0;
 }
 
 /* metadata */

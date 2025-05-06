@@ -82,11 +82,10 @@ def check_auth():
     return 'user_id' in session
 
 @app.route('/')
+@login_required  # Add login requirement
 def index():
-    if not check_auth():
-        return redirect(url_for('login'))
     project_name = request.args.get('project_name')
-    projects = current_user.projects.all()
+    projects = current_user.projects.all()  # Now safe to access projects
     return render_template('index.html', projects=projects, project_name=project_name)
 
 @app.route('/signup')

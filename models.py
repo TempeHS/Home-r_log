@@ -56,19 +56,22 @@ class Project(db.Model):
         }
 
 class LogEntry(db.Model):
+    __tablename__ = 'log_entry'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    title = db.Column(db.String(200), nullable=False)  # Add title column
     content = db.Column(db.Text, nullable=False)
-    repository_url = db.Column(db.String(500))  # Kept for tracking code changes
+    repository_url = db.Column(db.String(500))
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
-    time_worked = db.Column(db.Integer)  # Store minutes
+    time_worked = db.Column(db.Integer)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     developer_tag = db.Column(db.String(50), db.ForeignKey('user.developer_tag'), nullable=False)
     project_name = db.Column(db.String(100), db.ForeignKey('project.name'), nullable=False)
-
+    
     def to_dict(self):
         return {
             'id': self.id,
+            'title': self.title,  
             'content': self.content,
             'repository_url': self.repository_url,
             'start_time': self.start_time.isoformat(),

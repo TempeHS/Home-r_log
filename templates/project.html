@@ -23,17 +23,34 @@
                 </div>
                 <div class="card-body">
                     {% for entry in entries %}
-                    <div class="entry-preview">
-                        <h4>{{ entry.content[:100] }}...</h4>
-                        <div class="entry-metadata">
-                            <small>By: {{ entry.developer_tag }}</small>
-                            <small class="ms-3">{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+                    <div class="entry-preview mb-4">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <a href="{{ url_for('view_entry', entry_id=entry.id) }}" class="text-decoration-none">
+                                    <h4 class="mb-0">{{ entry.title }}</h4>
+                                </a>
+                                <small class="text-muted">{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+                            </div>
+                            <div class="card-body">
+                                <p class="entry-content">{{ entry.content[:200] }}{% if entry.content|length > 200 %}...{% endif %}</p>
+                                <div class="entry-metadata mt-3 pt-2 border-top">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="developer-tag">{{ entry.developer_tag }}</span>
+                                            <small class="ms-3">Time worked: {{ entry.time_worked }} minutes</small>
+                                        </div>
+                                        <a href="{{ url_for('view_entry', entry_id=entry.id) }}" class="btn btn-sm btn-outline-primary">
+                                            view_entry()
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     {% endfor %}
                     
                     <!-- Add Entry Button -->
-                    <div class="mt-4">
+                    <div class="mt-4 text-center">
                         <a href="{{ url_for('index', project_name=project.name) }}" class="btn btn-primary">
                             add_entry()
                         </a>

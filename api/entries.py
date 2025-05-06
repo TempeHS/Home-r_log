@@ -1,5 +1,6 @@
 from flask import jsonify, request
 from datetime import datetime
+from flask_login import current_user, login_required
 from models import LogEntry, User, db
 from . import api
 from .data_manager import DataManager
@@ -11,64 +12,54 @@ import math
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def calculate_time_worked(start_time, end_time):
-    diff_minutes = (end_time - start_time).total_seconds() / 60
-    return math.ceil(diff_minutes / 15) * 15
-
-
 # when get POST request; check auth, create new entries
 @api.route('/entries', methods=['POST'])
+@login_required
 def create_entry():
-    print("\n=== NEW ENTRY CREATION ATTEMPT ===")
-    
-    user = UserManager.get_current_user()
-    if not user:
-        print("ERROR: No authenticated user found")
-        return jsonify({'error': 'Authentication required'}), 401
-
+    logger.info("=== NEW ENTRY CREATION ATTEMPT ===")
     try:
         data = request.get_json()
-        required_fields = ['project', 'content', 'repository_url', 'start_time', 'end_time']
-        missing_fields = [field for field in required_fields if field not in data]
-        print("received data:", data)
-        if missing_fields:
-            return jsonify({'error': f"Missing fields: {', '.join(missing_fields)}"}), 400
+        logger.info(f"received data: {data}")
 
-        # validate timestamps first
+        required_fields = ['project_name', 'title', 'content', 'start_time', 'end_time']
+        for field in required_fields:
+            if not data.get(field):
+                raise ValueError(f"Missing required field: {field}")
+
+        # Use DataManager to validate and parse timestamps
         start_time, end_time = DataManager.validate_timestamps(
             data['start_time'], 
             data['end_time']
         )
 
+        # Calculate time worked using DataManager
+        time_worked = DataManager.calculate_time_worked(start_time, end_time)
+        logger.info(f"Calculated time worked: {time_worked} minutes")
+
         entry = LogEntry(
-            project=DataManager.sanitize_project(data['project']),
-            content=DataManager.sanitize_content(data['content']),
-            repository_url=DataManager.sanitize_repository_url(data['repository_url']),
+            project_name=data['project_name'],
+            title=data['title'],
+            content=data['content'],
+            repository_url=data.get('repository_url'),
             start_time=start_time,
             end_time=end_time,
-            developer_tag=user.developer_tag
+            time_worked=time_worked,  # Add time_worked field
+            developer_tag=current_user.developer_tag
         )
 
-
-        entry.time_worked = calculate_time_worked(entry.start_time, entry.end_time)
-        
         db.session.add(entry)
         db.session.commit()
         
-        print(f"SUCCESS: Entry created with ID: {entry.id}")
-        return jsonify({
-            'status': 'success',
-            'message': 'Entry created successfully',
-            'entry': entry.to_dict()
-        }), 201
+        logger.info(f"Entry created successfully with title: {entry.title} and time worked: {time_worked} minutes")
+        return jsonify({'status': 'success', 'entry': entry.to_dict()}), 201
 
     except Exception as e:
-        print(f"ERROR during entry creation: {str(e)}")
+        logger.error(f"Error during entry creation: {str(e)}", exc_info=True)
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
     finally:
-        print("=== ENTRY CREATION ATTEMPT COMPLETE ===\n")
+        logger.info("=== ENTRY CREATION ATTEMPT COMPLETE ===\n")
 
     @require_api_key
     def create_entry_api():
