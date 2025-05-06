@@ -1,6 +1,4 @@
-# DevLog - Developer Log Management System
-
-### IF THE MAIL DOESNT WORK, PLEASE MESSAGE ME ON elliott.pezzutti@education.nsw.gov.au
+# Home(r)_log , the home of homer themed logs
 
 > **Note:** For 2FA mail-related issues, contact elliott.pezzutti@education.nsw.gov.au
 
