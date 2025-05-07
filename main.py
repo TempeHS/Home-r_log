@@ -4,6 +4,8 @@ from flask_wtf.csrf import CSRFProtect
 from flask_login import LoginManager, login_required, current_user
 import logging
 from models import db, User, Project, LogEntry
+from api.data_manager import DataManager
+from api.user_manager import UserManager
 from api import api
 import os
 from config import Config
@@ -143,6 +145,7 @@ def projects():
 def view_project(project_name):
     try:
         project = Project.query.filter_by(name=project_name).first_or_404()
+        # Get entries with titles and sort by timestamp
         entries = LogEntry.query.filter_by(project_name=project.name).order_by(LogEntry.timestamp.desc()).all()
         logger.info(f"Viewing project {project_name} with {len(entries)} entries")
         return render_template('project.html', project=project, entries=entries)
@@ -154,38 +157,47 @@ def view_project(project_name):
 @app.route('/projects/new', methods=['GET', 'POST'])
 @login_required
 def new_project():
+    logger.info("New project creation attempt")
     try:
         if request.method == 'POST':
             name = request.form.get('name')
             description = request.form.get('description')
+            repository_url = request.form.get('repository_url')
             team_members = request.form.getlist('team_members')
             
-            logger.info(f"Creating new project: {name}")
-            logger.info(f"Team members: {team_members}")
+            logger.info(f"Attempting to create project with name: {name}, repo: {repository_url}")
+            
+            # Basic validation first
+            if not all([name, description, repository_url]):
+                raise ValueError("All fields are required")
+            
+            # Validate repository URL
+            repository_url = DataManager.sanitize_repository_url(repository_url)
             
             project = Project(
                 name=name,
                 description=description,
+                repository_url=repository_url,
                 created_by=current_user.developer_tag
             )
             
-            # Add creator to team members
-            project.team_members.append(current_user)
-            
-            # Add selected team members
-            for member_tag in team_members:
-                user = User.query.filter_by(developer_tag=member_tag).first()
-                if user and user != current_user:
-                    project.team_members.append(user)
-                    logger.info(f"Added {member_tag} to project {name}")
+            # Add team members
+            if team_members:
+                users = User.query.filter(User.developer_tag.in_(team_members)).all()
+                project.team_members.extend(users)
+                logger.info(f"Added {len(users)} team members to project")
             
             db.session.add(project)
             db.session.commit()
             
-            logger.info(f"Project {name} created successfully")
+            logger.info(f"Successfully created project: {name}")
             flash(f'Project {name} created successfully', 'success')
             return redirect(url_for('view_project', project_name=project.name))
             
+    except ValueError as e:
+        logger.error(f"Validation error in project creation: {str(e)}")
+        flash(str(e), 'error')
+        return redirect(url_for('new_project'))
     except Exception as e:
         logger.error(f"Error creating project: {str(e)}", exc_info=True)
         db.session.rollback()

@@ -37,6 +37,7 @@ class User(UserMixin, db.Model):
 class Project(db.Model):
     name = db.Column(db.String(100), primary_key=True)
     description = db.Column(db.Text, nullable=False)
+    repository_url = db.Column(db.String(500), nullable=False)  # Make repository required
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by = db.Column(db.String(50), db.ForeignKey('user.developer_tag'), nullable=False)
     
@@ -49,6 +50,7 @@ class Project(db.Model):
         return {
             'name': self.name,
             'description': self.description,
+            'repository_url': self.repository_url,
             'created_at': self.created_at.isoformat(),
             'created_by': self.created_by,
             'team_members': [member.developer_tag for member in self.team_members],
@@ -58,26 +60,24 @@ class Project(db.Model):
 class LogEntry(db.Model):
     __tablename__ = 'log_entry'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    title = db.Column(db.String(200), nullable=False)  # Add title column
+    title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    repository_url = db.Column(db.String(500))
+    project_name = db.Column(db.String(100), db.ForeignKey('project.name'), nullable=False)
+    developer_tag = db.Column(db.String(50), db.ForeignKey('user.developer_tag'), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
-    time_worked = db.Column(db.Integer)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    developer_tag = db.Column(db.String(50), db.ForeignKey('user.developer_tag'), nullable=False)
-    project_name = db.Column(db.String(100), db.ForeignKey('project.name'), nullable=False)
-    
+    time_worked = db.Column(db.Integer, nullable=False)  # in minutes
+
     def to_dict(self):
         return {
             'id': self.id,
-            'title': self.title,  
+            'title': self.title,
             'content': self.content,
-            'repository_url': self.repository_url,
-            'start_time': self.start_time.isoformat(),
-            'end_time': self.end_time.isoformat(),
-            'time_worked': self.time_worked,
-            'timestamp': self.timestamp.isoformat(),
+            'project_name': self.project_name,
             'developer_tag': self.developer_tag,
-            'project_name': self.project_name
+            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
+            'start_time': self.start_time.isoformat() if self.start_time else None,
+            'end_time': self.end_time.isoformat() if self.end_time else None,
+            'time_worked': self.time_worked
         }

@@ -8,9 +8,10 @@ class DataManager:
         if not url:
             return None
         url = url.strip()
-        url_pattern = r'^https?:\/\/(github\.com|gitlab\.com|bitbucket\.org)\/[\w\-\.\/]+'
+        # Only allow GitHub URLs
+        url_pattern = r'^https?:\/\/github\.com\/[\w\-\.\/]+'
         if not re.match(url_pattern, url):
-            raise ValueError("URL must be a valid repository URL")
+            raise ValueError("URL must be a valid GitHub repository URL")
         return url
 
     @staticmethod
@@ -77,15 +78,15 @@ class DataManager:
                 raise ValueError("Invalid date format")
         return clean_params
 
-@staticmethod
-def validate_password(password):
-    if len(password) < 7:
-        raise ValueError("Password must be at least 7 characters long")
-    if not any(c.isupper() for c in password):
-        raise ValueError("Password must contain at least one uppercase letter")
-    if not any(c.isdigit() or not c.isalnum() for c in password):
-        raise ValueError("Password must contain at least one number or special character")
-    return password.encode('utf-8')
+    @staticmethod
+    def validate_password(password):
+        if len(password) < 7:
+            raise ValueError("Password must be at least 7 characters long")
+        if not any(c.isupper() for c in password):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not any(c.isdigit() or not c.isalnum() for c in password):
+            raise ValueError("Password must contain at least one number or special character")
+        return password.encode('utf-8')
 
     @staticmethod
     def hash_password(password):

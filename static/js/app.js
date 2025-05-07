@@ -274,39 +274,37 @@ class HomeManager {
 
 class EntryViewer {
     constructor() {
-        if (window.location.pathname.startsWith('/entry/')) {
-            this.loadEntry(window.location.pathname.split('/').pop());
-        }
+        this.loadEntry(this.getEntryIdFromUrl());
+    }
+
+    getEntryIdFromUrl() {
+        const pathParts = window.location.pathname.split('/');
+        return pathParts[pathParts.length - 1];
     }
 
     async loadEntry(entryId) {
         try {
             const response = await fetch(`/api/entries/${entryId}`);
+            if (!response.ok) {
+                throw new Error('Failed to load entry');
+            }
             const entry = await response.json();
-            
-            if (!response.ok) throw new Error(entry.error);
-            
             this.displayEntry(entry);
         } catch (error) {
-            showNotification('failed to load entry', 'error');
+            console.error('Error loading entry:', error);
+            document.getElementById('entryTitle').textContent = 'Error loading entry';
         }
     }
 
     displayEntry(entry) {
-        const elements = {
-            '.entry-title': entry.project,
-            '.entry-metadata': `${new Date(entry.timestamp).toLocaleString()} - ${entry.developer_tag}`,
-            '.entry-content': entry.content,
-            '.entry-time-worked': `Time worked: ${entry.time_worked} minutes`,
-            '.entry-start-time': `Start: ${new Date(entry.start_time).toLocaleString()}`,
-            '.entry-end-time': `End: ${new Date(entry.end_time).toLocaleString()}`,
-            '.entry-repository': entry.repository_url ? `Repository: <a href="${escapeHtml(entry.repository_url)}" target="_blank">${escapeHtml(entry.repository_url)}</a>` : ''
-        };
-
-        Object.entries(elements).forEach(([selector, value]) => {
-            const element = document.querySelector(selector);
-            if (element) element.innerHTML = value;
-        });
+        document.getElementById('entryTitle').textContent = entry.title;
+        document.getElementById('entryProject').textContent = entry.project_name;
+        document.getElementById('entryDeveloper').textContent = entry.developer_tag;
+        document.getElementById('entryTimestamp').textContent = new Date(entry.timestamp).toLocaleString();
+        document.getElementById('entryContent').textContent = entry.content;
+        document.getElementById('entryTimeWorked').textContent = `Time worked: ${entry.time_worked} minutes`;
+        document.getElementById('entryStartTime').textContent = `Started: ${new Date(entry.start_time).toLocaleString()}`;
+        document.getElementById('entryEndTime').textContent = `Ended: ${new Date(entry.end_time).toLocaleString()}`;
     }
 }
 
@@ -581,7 +579,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.location.pathname === '/home') {
         new HomeManager();
     }
-    if (window.location.pathname.startsWith('/entry/')) {
+    if (window.location.pathname.includes('/entry/')) {
         new EntryViewer();
     }
     if (window.location.pathname === '/privacy') {
@@ -592,5 +590,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (document.getElementById('apiKeySection')) {
         new ProfileManager();
+    }
+    if (document.getElementById('entryForm')) {
+        new LogEntry();
     }
 });

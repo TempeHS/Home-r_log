@@ -1,59 +1,65 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h2>{{ project.name }}</h2>
-                </div>
-                <div class="card-body">
-                    <p class="project-description">{{ project.description }}</p>
-                    <div class="project-metadata">
-                        <small>Created by: {{ project.created_by }}</small>
-                        <small class="ms-3">Created: {{ project.created_at.strftime('%Y-%m-%d') }}</small>
-                    </div>
-                </div>
-            </div>
+<div class="container-fluid mt-4">
+    <!-- Project Header -->
+    <div class="text-center mb-5">
+        <h1 class="display-4">{{ project.name }}</h1>
+        <div class="btn-group mt-2">
+            <a href="{{ project.repository_url }}" target="_blank" class="btn btn-outline-primary">
+                <i class="bi bi-github"></i> View Repository
+            </a>
+        </div>
+        <p class="lead mt-3">{{ project.description }}</p>
+        <div class="text-muted">
+            <small>Created by: {{ project.created_by }} | {{ project.created_at.strftime('%Y-%m-%d') }}</small>
+        </div>
+    </div>
 
+    <!-- Content Split -->
+    <div class="row">
+        <!-- Left Side - Entries -->
+        <div class="col-md-6">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header">
                     <h3>Project Entries</h3>
                 </div>
+                <a href="{{ url_for('index', project_name=project.name) }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> New Entry
+                </a>
                 <div class="card-body">
                     {% for entry in entries %}
                     <div class="entry-preview mb-4">
                         <div class="card">
-                            <div class="card-header d-flex justify-content-between align-items-center">
+                            <div class="card-header">
                                 <a href="{{ url_for('view_entry', entry_id=entry.id) }}" class="text-decoration-none">
                                     <h4 class="mb-0">{{ entry.title }}</h4>
                                 </a>
-                                <small class="text-muted">{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
                             </div>
                             <div class="card-body">
-                                <p class="entry-content">{{ entry.content[:200] }}{% if entry.content|length > 200 %}...{% endif %}</p>
-                                <div class="entry-metadata mt-3 pt-2 border-top">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <span class="developer-tag">{{ entry.developer_tag }}</span>
-                                            <small class="ms-3">Time worked: {{ entry.time_worked }} minutes</small>
-                                        </div>
-                                        <a href="{{ url_for('view_entry', entry_id=entry.id) }}" class="btn btn-sm btn-outline-primary">
-                                            view_entry()
-                                        </a>
-                                    </div>
+                                <p>{{ entry.content[:200] }}{% if entry.content|length > 200 %}...{% endif %}</p>
+                                <div class="entry-metadata">
+                                    <span class="developer-tag">{{ entry.developer_tag }}</span>
+                                    <small class="text-muted">{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
                                 </div>
                             </div>
                         </div>
                     </div>
                     {% endfor %}
-                    
-                    <!-- Add Entry Button -->
-                    <div class="mt-4 text-center">
-                        <a href="{{ url_for('index', project_name=project.name) }}" class="btn btn-primary">
-                            add_entry()
-                        </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side - GitHub Roadmap -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Project Roadmap</h3>
+                </div>
+                <div class="card-body">
+                    <div id="github-roadmap" class="roadmap-container">
+                        <!-- Roadmap will be dynamically loaded here -->
+                        <div class="loading-spinner">Loading repository data...</div>
                     </div>
                 </div>
             </div>

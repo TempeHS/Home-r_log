@@ -21,18 +21,17 @@ def create_entry():
         data = request.get_json()
         logger.info(f"received data: {data}")
 
+        # Validate required fields
         required_fields = ['project_name', 'title', 'content', 'start_time', 'end_time']
         for field in required_fields:
             if not data.get(field):
                 raise ValueError(f"Missing required field: {field}")
 
-        # Use DataManager to validate and parse timestamps
-        start_time, end_time = DataManager.validate_timestamps(
-            data['start_time'], 
-            data['end_time']
-        )
+        # Parse timestamps
+        start_time = datetime.fromisoformat(data['start_time'].replace('Z', '+00:00'))
+        end_time = datetime.fromisoformat(data['end_time'].replace('Z', '+00:00'))
 
-        # Calculate time worked using DataManager
+        # Calculate time worked
         time_worked = DataManager.calculate_time_worked(start_time, end_time)
         logger.info(f"Calculated time worked: {time_worked} minutes")
 
@@ -40,10 +39,9 @@ def create_entry():
             project_name=data['project_name'],
             title=data['title'],
             content=data['content'],
-            repository_url=data.get('repository_url'),
             start_time=start_time,
             end_time=end_time,
-            time_worked=time_worked,  # Add time_worked field
+            time_worked=time_worked,
             developer_tag=current_user.developer_tag
         )
 
