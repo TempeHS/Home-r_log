@@ -353,3 +353,89 @@ small,
 .sticky-top {
     top: 1rem;
 }
+
+/* commit timeline */
+.commit-timeline {
+    border-left: 2px solid #e0e0e0;
+    padding-left: 20px;
+    margin-left: 10px;
+}
+
+.commit-item {
+    position: relative;
+}
+
+.commit-item::before {
+    content: '';
+    position: absolute;
+    left: -26px;
+    top: 8px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #007bff;
+    border: 2px solid #fff;
+}
+
+.commit-sha {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.9em;
+}
+
+.commit-message {
+    margin: 4px 0;
+    font-weight: 500;
+}
+
+/* Project page layout */
+.card.h-100 {
+    height: calc(100vh - 300px) !important; /* Adjust based on your header size */
+}
+
+.entries-scroll, .commits-scroll {
+    height: calc(100% - 20px);
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+/* Scrollbar styling */
+.entries-scroll::-webkit-scrollbar,
+.commits-scroll::-webkit-scrollbar {
+    width: 8px;
+}
+
+.entries-scroll::-webkit-scrollbar-track,
+.commits-scroll::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.entries-scroll::-webkit-scrollbar-thumb,
+.commits-scroll::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+/* Commit timeline styling */
+.commit-timeline {
+    border-left: 2px solid #e0e0e0;
+    padding-left: 20px;
+    margin-left: 10px;
+}
+
+.commit-item {
+    position: relative;
+}
+
+.commit-item::before {
+    content: '';
+    position: absolute;
+    left: -26px;
+    top: 50%;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #007bff;
+    border: 2px solid #fff;
+    transform: translateY(-50%);
+}

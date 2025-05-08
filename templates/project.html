@@ -20,14 +20,14 @@
     <div class="row">
         <!-- Left Side - Entries -->
         <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h3>Project Entries</h3>
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Project Entries</h3>
+                    <a href="{{ url_for('index', project_name=project.name) }}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus-circle"></i> New Entry
+                    </a>
                 </div>
-                <a href="{{ url_for('index', project_name=project.name) }}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> New Entry
-                </a>
-                <div class="card-body">
+                <div class="card-body entries-scroll">
                     {% for entry in entries %}
                     <div class="entry-preview mb-4">
                         <div class="card">
@@ -50,17 +50,33 @@
             </div>
         </div>
 
-        <!-- Right Side - GitHub Roadmap -->
+        <!-- Right Side - GitHub Commits -->
         <div class="col-md-6">
-            <div class="card">
+            <div class="card h-100">
                 <div class="card-header">
-                    <h3>Project Roadmap</h3>
+                    <h3 class="card-title mb-0">
+                        <i class="bi bi-git"></i> Commit History
+                    </h3>
                 </div>
-                <div class="card-body">
-                    <div id="github-roadmap" class="roadmap-container">
-                        <!-- Roadmap will be dynamically loaded here -->
-                        <div class="loading-spinner">Loading repository data...</div>
+                <div class="card-body commits-scroll">
+                    {% if commits %}
+                    <div class="commit-timeline">
+                        {% for commit in commits|reverse %}
+                        <div class="commit-item mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <a href="{{ commit.url }}" target="_blank" class="text-decoration-none">
+                                    <span class="commit-sha text-muted">{{ commit.sha }}</span>
+                                </a>
+                                <small class="text-muted">{{ commit.date.strftime('%Y-%m-%d %H:%M') }}</small>
+                            </div>
+                            <div class="commit-message">{{ commit.message }}</div>
+                            <small class="text-muted">by {{ commit.author }}</small>
+                        </div>
+                        {% endfor %}
                     </div>
+                    {% else %}
+                    <p class="text-muted">No commit history available</p>
+                    {% endif %}
                 </div>
             </div>
         </div>

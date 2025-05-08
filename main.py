@@ -11,6 +11,7 @@ import os
 from config import Config
 from flask_mail import Mail
 from flask_migrate import Migrate
+from api.gogitter import GoGitter 
 
 # Configure logging
 logging.basicConfig(
@@ -145,10 +146,19 @@ def projects():
 def view_project(project_name):
     try:
         project = Project.query.filter_by(name=project_name).first_or_404()
-        # Get entries with titles and sort by timestamp
         entries = LogEntry.query.filter_by(project_name=project.name).order_by(LogEntry.timestamp.desc()).all()
-        logger.info(f"Viewing project {project_name} with {len(entries)} entries")
-        return render_template('project.html', project=project, entries=entries)
+        
+        # Fetch GitHub commit history using GoGitter
+        github = GoGitter()
+        commits = github.get_commit_history(project.repository_url)
+        repo_info = github.get_repo_info(project.repository_url)
+        
+        logger.info(f"Viewing project {project_name} with {len(entries)} entries and {len(commits)} commits")
+        return render_template('project.html', 
+                             project=project, 
+                             entries=entries, 
+                             commits=commits,
+                             repo_info=repo_info)
     except Exception as e:
         logger.error(f"Error viewing project {project_name}: {str(e)}", exc_info=True)
         flash('Error viewing project', 'error')

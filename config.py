@@ -8,10 +8,10 @@ class Config:
     # core flask
     PREFERRED_URL_SCHEME = 'https'
     SSL_REDIRECT = True
-    SECRET_KEY = os.getenv('SECRET_KEY', os.urandom(24))
+    SECRET_KEY = os.getenv('SECRET_KEY')
     
     # database
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///.databaseFiles/devlog.db')
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # session 
@@ -65,3 +65,5 @@ class Config:
     API_RATE_LIMIT = "100 per hour"
     API_KEY_LENGTH = 32
     API_KEY_PREFIX = "dvlg_"
+
+    GITHUB_ACCESS_TOKEN = os.getenv('GITHUB_ACCESS_TOKEN')
