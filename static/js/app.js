@@ -285,26 +285,31 @@ class EntryViewer {
     async loadEntry(entryId) {
         try {
             const response = await fetch(`/api/entries/${entryId}`);
-            if (!response.ok) {
-                throw new Error('Failed to load entry');
-            }
+            if (!response.ok) throw new Error('Failed to load entry');
+            
             const entry = await response.json();
             this.displayEntry(entry);
         } catch (error) {
             console.error('Error loading entry:', error);
-            document.getElementById('entryTitle').textContent = 'Error loading entry';
+            document.getElementById('entryContent').textContent = 'Error loading entry';
         }
     }
 
     displayEntry(entry) {
-        document.getElementById('entryTitle').textContent = entry.title;
-        document.getElementById('entryProject').textContent = entry.project_name;
-        document.getElementById('entryDeveloper').textContent = entry.developer_tag;
-        document.getElementById('entryTimestamp').textContent = new Date(entry.timestamp).toLocaleString();
-        document.getElementById('entryContent').textContent = entry.content;
-        document.getElementById('entryTimeWorked').textContent = `Time worked: ${entry.time_worked} minutes`;
-        document.getElementById('entryStartTime').textContent = `Started: ${new Date(entry.start_time).toLocaleString()}`;
-        document.getElementById('entryEndTime').textContent = `Ended: ${new Date(entry.end_time).toLocaleString()}`;
+        const elements = {
+            title: entry.title,
+            content: entry.content,
+            developer: entry.developer_tag,
+            timestamp: new Date(entry.timestamp).toLocaleString(),
+            timeWorked: `${entry.time_worked} minutes`,
+            commitInfo: entry.commit_sha ? 
+                `Commit: ${entry.commit_sha.substring(0,7)}` : 'No commit linked'
+        };
+
+        Object.entries(elements).forEach(([id, value]) => {
+            const element = document.getElementById(`entry${id.charAt(0).toUpperCase() + id.slice(1)}`);
+            if (element) element.textContent = value;
+        });
     }
 }
 

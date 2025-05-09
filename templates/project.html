@@ -12,7 +12,7 @@
         </div>
         <p class="lead mt-3">{{ project.description }}</p>
         <div class="text-muted">
-            <small>Created by: {{ project.created_by }} | {{ project.created_at.strftime('%Y-%m-%d') }}</small>
+            <small>Created by: {{ project.created_by }} | {{ project.created_at|format_date }}</small>
         </div>
     </div>
 
@@ -29,7 +29,7 @@
                 </div>
                 <div class="card-body entries-scroll">
                     {% for entry in entries %}
-                    <div class="entry-preview mb-4">
+                    <div class="entry-preview mb-4" data-commit-sha="{{ entry.commit_sha }}">
                         <div class="card">
                             <div class="card-header">
                                 <a href="{{ url_for('view_entry', entry_id=entry.id) }}" class="text-decoration-none">
@@ -50,36 +50,81 @@
             </div>
         </div>
 
-        <!-- Right Side - GitHub Commits -->
+        <!-- Right Side - Development Roadmap -->
         <div class="col-md-6">
             <div class="card h-100">
                 <div class="card-header">
                     <h3 class="card-title mb-0">
-                        <i class="bi bi-git"></i> Commit History
+                        <i class="bi bi-git"></i> Development Roadmap
                     </h3>
                 </div>
                 <div class="card-body commits-scroll">
                     {% if commits %}
-                    <div class="commit-timeline">
+                    <div class="commit-timeline" id="commitTimeline">
                         {% for commit in commits|reverse %}
-                        <div class="commit-item mb-3">
+                        <div class="commit-item mb-3" data-commit-sha="{{ commit.sha }}">
                             <div class="d-flex justify-content-between align-items-center">
-                                <a href="{{ commit.url }}" target="_blank" class="text-decoration-none">
-                                    <span class="commit-sha text-muted">{{ commit.sha }}</span>
-                                </a>
-                                <small class="text-muted">{{ commit.date.strftime('%Y-%m-%d %H:%M') }}</small>
+                                <small class="text-muted">{{ commit.date }}</small>
                             </div>
                             <div class="commit-message">{{ commit.message }}</div>
                             <small class="text-muted">by {{ commit.author }}</small>
+                            <div class="related-entries mt-2"></div>
                         </div>
                         {% endfor %}
                     </div>
-                    {% else %}
-                    <p class="text-muted">No commit history available</p>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+<script type="module">
+    document.addEventListener('DOMContentLoaded', () => {
+        const entries = {{ entries|tojson|safe }};
+        const commitTimeline = document.getElementById('commitTimeline');
+
+        // Group entries by commit
+        const entryMap = new Map();
+        entries.forEach(entry => {
+            if (entry.commit_sha) {
+                if (!entryMap.has(entry.commit_sha)) {
+                    entryMap.set(entry.commit_sha, []);
+                }
+                entryMap.get(entry.commit_sha).push(entry);
+            }
+        });
+
+        // Add entry indicators to commits
+        document.querySelectorAll('.commit-item').forEach(commitItem => {
+            const sha = commitItem.dataset.commitSha;
+            const relatedEntries = entryMap.get(sha) || [];
+            
+            if (relatedEntries.length > 0) {
+                const entriesDiv = commitItem.querySelector('.related-entries');
+                const entryLinks = relatedEntries.map(entry => `
+                    <a href="/entry/${entry.id}" class="badge bg-primary text-decoration-none me-1">
+                        ${entry.title.substring(0, 20)}${entry.title.length > 20 ? '...' : ''}
+                    </a>
+                `).join('');
+                
+                entriesDiv.innerHTML = entryLinks;
+            }
+        });
+
+        // Highlight related entries when clicking a commit
+        commitTimeline.addEventListener('click', (e) => {
+            const commitItem = e.target.closest('.commit-item');
+            if (!commitItem) return;
+
+            const sha = commitItem.dataset.commitSha;
+            document.querySelectorAll('.entry-preview').forEach(entry => {
+                if (entry.dataset.commitSha === sha) {
+                    entry.scrollIntoView({ behavior: 'smooth' });
+                    entry.classList.add('highlight');
+                    setTimeout(() => entry.classList.remove('highlight'), 2000);
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}

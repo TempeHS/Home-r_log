@@ -1,27 +1,57 @@
-{% extends 'layout.html' %}
+{% extends "base.html" %}
+
 {% block content %}
-<div class="container">
-  <div class="row">
-    <h1>Sample Secure Form</h1>
-  </div>
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3>New Entry for {{ project_name }}</h3>
+        </div>
+        <div class="card-body">
+            <form id="newEntryForm" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <div class="mb-3">
+                    <label for="title" class="form-label">Title</label>
+                    <input type="text" class="form-control" id="title" name="title" required maxlength="200">
+                </div>
+                <div class="mb-3">
+                    <label for="content" class="form-label">Content</label>
+                    <textarea class="form-control" id="content" name="content" rows="4" required></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="commitSelect" class="form-label">Related Commit</label>
+                    <select class="form-control" id="commitSelect" name="commit">
+                        <option value="">No related commit</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="startTime" class="form-label">Start Time</label>
+                            <input type="datetime-local" class="form-control" id="startTime" name="start_time" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="endTime" class="form-label">End Time</label>
+                            <input type="datetime-local" class="form-control" id="endTime" name="end_time" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="timeWorked" class="form-label">Time Worked (minutes)</label>
+                    <input type="number" class="form-control" id="timeWorked" name="time_worked" required>
+                </div>
+                <div id="formError" class="alert alert-danger" style="display: none;"></div>
+                <button type="submit" class="btn btn-primary">Create Entry</button>
+            </form>
+        </div>
+    </div>
 </div>
-<div class="container">
-  <div class="row">
-    <form action="/form.html" method="POST" class="box">
-      <div class="col-auto">
-        <label name="exampleFormControlInput1" class="form-label">Email address</label>
-        <input name="email" type="email" class="form-control" id="exampleFormControlInput1" pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2, 4}$" placeholder="name@example.com">
-      </div>
-      <div class="col-auto">
-        <label for="exampleFormControlTextarea1" class="form-label">Example text area</label>
-        <textarea class="form-control" name="text" id="exampleFormControlTextarea1" rows="3"></textarea>
-      </div>
-      <br/>
-      <div class="col-auto">
-        <button type="submit" class="btn btn-primary mb-3">Submit</button>
-      </div>
-      <input type="hidden" name="csrf_token" value = "{{ csrf_token() }}" />
-    </form>
-  </div>
-</div>
+
+<script type="module">
+    import { LogEntry } from '/static/js/logEntry.js';
+    document.addEventListener('DOMContentLoaded', () => {
+        new LogEntry();
+    });
+</script>
 {% endblock %}

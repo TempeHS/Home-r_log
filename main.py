@@ -12,6 +12,7 @@ from config import Config
 from flask_mail import Mail
 from flask_migrate import Migrate
 from api.gogitter import GoGitter 
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(
@@ -123,10 +124,15 @@ def home():
     return render_template('home.html')
 
 @app.route('/entry/<int:entry_id>')
+@login_required
 def view_entry(entry_id):
-    if not check_auth():
-        return redirect(url_for('login'))
-    return render_template('entry_veiw.html')
+    try:
+        entry = LogEntry.query.get_or_404(entry_id)
+        return render_template('entry_veiw.html', entry=entry)
+    except Exception as e:
+        logger.error(f"Error viewing entry {entry_id}: {str(e)}")
+        flash('Error viewing entry', 'error')
+        return redirect(url_for('projects'))
 
 @app.route('/profile')
 def profile():
@@ -144,25 +150,33 @@ def projects():
 @app.route('/projects/<string:project_name>')
 @login_required
 def view_project(project_name):
+    project = Project.query.get_or_404(project_name)
+    entries = LogEntry.query.filter_by(project_name=project_name).order_by(LogEntry.timestamp.desc()).all()
+    
+    # Convert entries to dictionary format
+    entries_dict = [entry.to_dict() for entry in entries]
+    
+    # Get commits for the project
+    gogitter = GoGitter()
     try:
-        project = Project.query.filter_by(name=project_name).first_or_404()
-        entries = LogEntry.query.filter_by(project_name=project.name).order_by(LogEntry.timestamp.desc()).all()
-        
-        # Fetch GitHub commit history using GoGitter
-        github = GoGitter()
-        commits = github.get_commit_history(project.repository_url)
-        repo_info = github.get_repo_info(project.repository_url)
-        
-        logger.info(f"Viewing project {project_name} with {len(entries)} entries and {len(commits)} commits")
-        return render_template('project.html', 
-                             project=project, 
-                             entries=entries, 
-                             commits=commits,
-                             repo_info=repo_info)
+        commits = gogitter.get_commit_history(project.repository_url)
+        formatted_commits = []
+        for commit in commits:
+            formatted_commits.append({
+                'sha': commit.sha,
+                'message': commit.commit.message,
+                'author': commit.commit.author.name,
+                'date': commit.commit.author.date.isoformat(),
+                'url': commit.html_url
+            })
     except Exception as e:
-        logger.error(f"Error viewing project {project_name}: {str(e)}", exc_info=True)
-        flash('Error viewing project', 'error')
-        return redirect(url_for('projects'))
+        logger.error(f"Failed to fetch commits: {str(e)}")
+        formatted_commits = []
+    
+    return render_template('project.html', 
+                         project=project.to_dict(), 
+                         entries=entries_dict,
+                         commits=formatted_commits)
 
 @app.route('/projects/new', methods=['GET', 'POST'])
 @login_required
@@ -215,6 +229,62 @@ def new_project():
         
     users = User.query.all()
     return render_template('newproject.html', users=users)
+
+@app.route('/entry/new/<string:project_name>', methods=['GET', 'POST'])
+@login_required
+def new_entry(project_name):
+    try:
+        project = Project.query.filter_by(name=project_name).first_or_404()
+        
+        if request.method == 'POST':
+            commit_data = json.loads(request.form.get('commit', '{}'))
+            
+            entry = LogEntry(
+                title=request.form['title'],
+                content=request.form['content'],
+                project_name=project_name,
+                developer_tag=current_user.developer_tag,
+                start_time=datetime.fromisoformat(request.form['start_time']),
+                end_time=datetime.fromisoformat(request.form['end_time']),
+                time_worked=int(request.form['time_worked']),
+                commit_sha=commit_data.get('sha'),
+                commit_url=commit_data.get('url')
+            )
+            
+            db.session.add(entry)
+            db.session.commit()
+            
+            logger.info(f"Created new entry for project {project_name}")
+            return redirect(url_for('view_project', project_name=project_name))
+            
+    except Exception as e:
+        logger.error(f"Error creating entry: {str(e)}")
+        flash('Error creating entry', 'error')
+        
+    return render_template('form.html', project_name=project_name)
+
+@app.route('/api/projects/<string:project_name>/commits', methods=['GET'])
+@login_required
+def get_project_commits(project_name):
+    try:
+        project = Project.query.filter_by(name=project_name).first_or_404()
+        github = GoGitter()
+        commits = github.get_commit_history(project.repository_url)
+        return jsonify(commits)
+    except Exception as e:
+        logger.error(f"Error fetching commits: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.template_filter('format_date')
+def format_date(value, format='%Y-%m-%d'):
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value)
+        except ValueError:
+            return value
+    if isinstance(value, datetime):
+        return value.strftime(format)
+    return value
 
 #HAVE THIS AT THE END!!!!
 if __name__ == '__main__':

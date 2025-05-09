@@ -101,6 +101,20 @@ h1, h2, h3, h4, h5, h6,
     background-color: rgba(var(--bs-primary-rgb), 0.1);
 }
 
+.entry-preview[data-commit-sha] {
+    border-left: 3px solid var(--yellow);
+}
+
+.entry-preview.highlight {
+    animation: highlight 2s ease-in-out;
+}
+
+@keyframes highlight {
+    0% { background-color: var(--card); }
+    50% { background-color: rgba(255, 215, 0, 0.2); }
+    100% { background-color: var(--card); }
+}
+
 /* content */
 .card-body {
     color: var(--white);
@@ -387,6 +401,15 @@ small,
     font-weight: 500;
 }
 
+.commit-item .related-entries {
+    margin-top: 0.5rem;
+}
+
+.commit-item .badge {
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
 /* Project page layout */
 .card.h-100 {
     height: calc(100vh - 300px) !important; /* Adjust based on your header size */
@@ -438,4 +461,34 @@ small,
     background: #007bff;
     border: 2px solid #fff;
     transform: translateY(-50%);
+}
+
+/* commit select */
+#commitSelect {
+    background-color: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+
+#commitSelect option {
+    background-color: var(--card);
+    color: var(--text);
+    padding: 8px;
+}
+
+#commitSelect:focus {
+    border-color: var(--yellow);
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+}
+
+.commit-preview {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.9em;
+    white-space: pre-wrap;
+    max-height: 100px;
+    overflow-y: auto;
 }

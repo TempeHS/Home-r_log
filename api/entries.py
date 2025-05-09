@@ -1,12 +1,14 @@
 from flask import jsonify, request
 from datetime import datetime
 from flask_login import current_user, login_required
-from models import LogEntry, User, db
+from models import LogEntry, User, db, Project, LogEntry
 from . import api
 from .data_manager import DataManager
 from .user_manager import UserManager
 import logging
 import math
+import json
+from .gogitter import GoGitter
 
 # logging setup for terminal output
 logging.basicConfig(level=logging.INFO)
@@ -16,48 +18,57 @@ logger = logging.getLogger(__name__)
 @api.route('/entries', methods=['POST'])
 @login_required
 def create_entry():
-    logger.info("=== NEW ENTRY CREATION ATTEMPT ===")
+    logger.info("=== CREATE ENTRY REQUEST RECEIVED ===")
+    logger.info(f"Request method: {request.method}")
+    logger.info(f"Content-Type: {request.headers.get('Content-Type')}")
+    
     try:
         data = request.get_json()
-        logger.info(f"received data: {data}")
+        if not data:
+            logger.error("No JSON data received")
+            return jsonify({'error': 'No data provided'}), 400
+            
+        logger.info(f"Parsed request data: {json.dumps(data, indent=2)}")
 
         # Validate required fields
-        required_fields = ['project_name', 'title', 'content', 'start_time', 'end_time']
-        for field in required_fields:
-            if not data.get(field):
-                raise ValueError(f"Missing required field: {field}")
-
-        # Parse timestamps
-        start_time = datetime.fromisoformat(data['start_time'].replace('Z', '+00:00'))
-        end_time = datetime.fromisoformat(data['end_time'].replace('Z', '+00:00'))
-
-        # Calculate time worked
-        time_worked = DataManager.calculate_time_worked(start_time, end_time)
-        logger.info(f"Calculated time worked: {time_worked} minutes")
-
-        entry = LogEntry(
-            project_name=data['project_name'],
-            title=data['title'],
-            content=data['content'],
-            start_time=start_time,
-            end_time=end_time,
-            time_worked=time_worked,
-            developer_tag=current_user.developer_tag
-        )
-
-        db.session.add(entry)
-        db.session.commit()
+        required_fields = ['title', 'content', 'project_name', 'start_time', 'end_time', 'time_worked']
+        missing_fields = [field for field in required_fields if field not in data]
         
-        logger.info(f"Entry created successfully with title: {entry.title} and time worked: {time_worked} minutes")
-        return jsonify({'status': 'success', 'entry': entry.to_dict()}), 201
+        if missing_fields:
+            logger.error(f"Missing required fields: {missing_fields}")
+            return jsonify({
+                'error': 'Missing required fields',
+                'missing_fields': missing_fields
+            }), 400
 
+        # Create entry
+        try:
+            entry = LogEntry(
+                title=data['title'],
+                content=data['content'],
+                project_name=data['project_name'],
+                developer_tag=current_user.developer_tag,
+                start_time=datetime.fromisoformat(data['start_time']),
+                end_time=datetime.fromisoformat(data['end_time']),
+                time_worked=int(data['time_worked']),
+                commit_sha=data.get('commit_sha')  # Only include commit_sha
+            )
+            
+            logger.info(f"Created entry object: {entry}")
+            db.session.add(entry)
+            db.session.commit()
+            logger.info("Successfully committed to database")
+            
+            return jsonify(entry.to_dict()), 201
+            
+        except ValueError as e:
+            logger.error(f"Data validation error: {str(e)}")
+            return jsonify({'error': f'Invalid data format: {str(e)}'}), 400
+            
     except Exception as e:
-        logger.error(f"Error during entry creation: {str(e)}", exc_info=True)
+        logger.error("Error creating entry", exc_info=True)
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-    finally:
-        logger.info("=== ENTRY CREATION ATTEMPT COMPLETE ===\n")
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
 
     @require_api_key
     def create_entry_api():
@@ -159,3 +170,37 @@ def get_entry(entry_id):
         return jsonify(entry.to_dict())
     except Exception as e:
         return jsonify({'error': str(e)}), 400
+
+@api.route('/projects/<string:project_name>/commits', methods=['GET'])
+@login_required
+def get_project_commits(project_name):
+    logger.info(f"Fetching commits for project: {project_name}")
+    
+    try:
+        # Get project from database
+        project = Project.query.get_or_404(project_name)
+        logger.info(f"Found project: {project.name}")
+
+        # Initialize GoGitter
+        gogitter = GoGitter()
+        
+        # Get commits from GitHub
+        commits = gogitter.get_commit_history(project.repository_url)
+        logger.info(f"Retrieved {len(commits)} commits")
+        
+        # Format commit data for frontend
+        formatted_commits = []
+        for commit in commits:
+            formatted_commits.append({
+                'sha': commit.sha,
+                'message': commit.commit.message,
+                'author': commit.commit.author.name,
+                'date': commit.commit.author.date.isoformat(),
+                'url': commit.html_url
+            })
+        
+        return jsonify(formatted_commits), 200
+        
+    except Exception as e:
+        logger.error(f"Error fetching commits for project {project_name}: {str(e)}")
+        return jsonify({'error': f'Failed to fetch commits: {str(e)}'}), 500

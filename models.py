@@ -51,10 +51,9 @@ class Project(db.Model):
             'name': self.name,
             'description': self.description,
             'repository_url': self.repository_url,
-            'created_at': self.created_at.isoformat(),
+            'created_at': self.created_at,  # Keep as datetime object
             'created_by': self.created_by,
-            'team_members': [member.developer_tag for member in self.team_members],
-            'entry_count': self.entries.count()
+            'team_members': [member.developer_tag for member in self.team_members]
         }
 
 class LogEntry(db.Model):
@@ -68,6 +67,7 @@ class LogEntry(db.Model):
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
     time_worked = db.Column(db.Integer, nullable=False)  # in minutes
+    commit_sha = db.Column(db.String(40))  # Store the commit SHA
 
     def to_dict(self):
         return {
@@ -76,8 +76,9 @@ class LogEntry(db.Model):
             'content': self.content,
             'project_name': self.project_name,
             'developer_tag': self.developer_tag,
-            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
-            'start_time': self.start_time.isoformat() if self.start_time else None,
-            'end_time': self.end_time.isoformat() if self.end_time else None,
-            'time_worked': self.time_worked
+            'timestamp': self.timestamp,  # Keep as datetime object
+            'start_time': self.start_time,  # Keep as datetime object
+            'end_time': self.end_time,  # Keep as datetime object
+            'time_worked': self.time_worked,
+            'commit_sha': self.commit_sha
         }

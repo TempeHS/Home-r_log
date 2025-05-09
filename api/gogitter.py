@@ -4,6 +4,7 @@ import re
 import os
 from dotenv import load_dotenv
 import logging
+from urllib.parse import urlparse
 
 # Load environment variables
 load_dotenv()
@@ -12,43 +13,34 @@ logger = logging.getLogger(__name__)
 
 class GoGitter:
     def __init__(self):
-        token = os.getenv('GITHUB_ACCESS_TOKEN')
-        if not token:
-            logger.error("GitHub access token not found in environment variables")
-            raise ValueError("GitHub access token not configured")
-        self.github = Github(token)
+        self.token = os.getenv('GITHUB_ACCESS_TOKEN')
+        if not self.token:
+            raise ValueError("GitHub access token not found in environment variables")
+        self.github = Github(self.token)
 
     def parse_repo_url(self, url):
         """Extract owner and repo name from GitHub URL"""
-        pattern = r'github\.com/([^/]+)/([^/]+)'
-        match = re.search(pattern, url)
-        if not match:
-            logger.error(f"Invalid GitHub URL format: {url}")
-            raise ValueError("Invalid GitHub repository URL")
-        return match.groups()
+        parsed = urlparse(url)
+        path_parts = parsed.path.strip('/').split('/')
+        if len(path_parts) < 2:
+            raise ValueError(f"Invalid GitHub repository URL: {url}")
+        return path_parts[0], path_parts[1]
 
     def get_commit_history(self, repo_url, limit=10):
         """Get recent commits for a repository"""
         try:
             owner, repo_name = self.parse_repo_url(repo_url)
-            repo = self.github.get_repo(f"{owner}/{repo_name}")
+            logger.info(f"Fetching commits for {owner}/{repo_name}")
             
-            commits = []
-            for commit in repo.get_commits()[:limit]:
-                commits.append({
-                    'sha': commit.sha[:7],
-                    'message': commit.commit.message.split('\n')[0],
-                    'author': commit.commit.author.name,
-                    'date': commit.commit.author.date,
-                    'url': commit.html_url,
-                    'avatar_url': commit.author.avatar_url if commit.author else None
-                })
-            logger.info(f"Successfully fetched {len(commits)} commits for {repo_url}")
+            repo = self.github.get_repo(f"{owner}/{repo_name}")
+            commits = list(repo.get_commits()[:limit])
+            
+            logger.info(f"Retrieved {len(commits)} commits")
             return commits
             
         except Exception as e:
             logger.error(f"Error fetching commits: {str(e)}")
-            return []
+            raise
 
     def get_repo_info(self, repo_url):
         """Get repository information"""
