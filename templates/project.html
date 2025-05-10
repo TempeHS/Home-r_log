@@ -78,53 +78,6 @@
         </div>
     </div>
 </div>
-<script type="module">
-    document.addEventListener('DOMContentLoaded', () => {
-        const entries = {{ entries|tojson|safe }};
-        const commitTimeline = document.getElementById('commitTimeline');
+<input type="hidden" id="projectData" value="{{ entries|tojson|safe }}">
 
-        // Group entries by commit
-        const entryMap = new Map();
-        entries.forEach(entry => {
-            if (entry.commit_sha) {
-                if (!entryMap.has(entry.commit_sha)) {
-                    entryMap.set(entry.commit_sha, []);
-                }
-                entryMap.get(entry.commit_sha).push(entry);
-            }
-        });
-
-        // Add entry indicators to commits
-        document.querySelectorAll('.commit-item').forEach(commitItem => {
-            const sha = commitItem.dataset.commitSha;
-            const relatedEntries = entryMap.get(sha) || [];
-            
-            if (relatedEntries.length > 0) {
-                const entriesDiv = commitItem.querySelector('.related-entries');
-                const entryLinks = relatedEntries.map(entry => `
-                    <a href="/entry/${entry.id}" class="badge bg-primary text-decoration-none me-1">
-                        ${entry.title.substring(0, 20)}${entry.title.length > 20 ? '...' : ''}
-                    </a>
-                `).join('');
-                
-                entriesDiv.innerHTML = entryLinks;
-            }
-        });
-
-        // Highlight related entries when clicking a commit
-        commitTimeline.addEventListener('click', (e) => {
-            const commitItem = e.target.closest('.commit-item');
-            if (!commitItem) return;
-
-            const sha = commitItem.dataset.commitSha;
-            document.querySelectorAll('.entry-preview').forEach(entry => {
-                if (entry.dataset.commitSha === sha) {
-                    entry.scrollIntoView({ behavior: 'smooth' });
-                    entry.classList.add('highlight');
-                    setTimeout(() => entry.classList.remove('highlight'), 2000);
-                }
-            });
-        });
-    });
-</script>
 {% endblock %}

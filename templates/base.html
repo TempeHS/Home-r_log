@@ -90,20 +90,39 @@
         {% endblock %}
     </main>
 
-    <!-- Update the script imports at the bottom of the file -->
-    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='js/auth.js') }}"></script>
-    <script type="module" src="{{ url_for('static', filename='js/app.js') }}"></script>
-    <script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}" defer></script>
+    <script type="module" src="{{ url_for('static', filename='js/auth.js') }}" defer></script>
+    <script type="module" src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+
+    <!-- Initialize page-specific JavaScript -->
+    <script type="module">
+        import { ProjectView } from "{{ url_for('static', filename='js/project.js') }}";
+        import { EntryForm } from "{{ url_for('static', filename='js/form.js') }}";
+        import { EntryViewer } from "{{ url_for('static', filename='js/entryViewer.js') }}";
+        import { LogEntry } from "{{ url_for('static', filename='js/logEntry.js') }}";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const path = window.location.pathname;
+            
+            if (path.includes('/project/')) {
+                new ProjectView();
+            } else if (path.includes('/entry/') && !path.includes('/new')) {
+                new EntryViewer();
+            } else if (path.includes('/entry/new/')) {
+                new EntryForm();
+            } else if (path === '/') {
+                new LogEntry();
+            }
+        });
+    </script>
+
+    <!-- Service Worker -->
+    <script defer>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/static/js/serviceWorker.js')
-                    .then(registration => {
-                        console.log('ServiceWorker registered:', registration);
-                    })
-                    .catch(error => {
-                        console.log('ServiceWorker registration failed:', error);
-                    });
+                navigator.serviceWorker.register("{{ url_for('static', filename='js/serviceWorker.js') }}")
+                    .then(registration => console.log('ServiceWorker registered:', registration))
+                    .catch(error => console.error('ServiceWorker registration failed:', error));
             });
         }
     </script>

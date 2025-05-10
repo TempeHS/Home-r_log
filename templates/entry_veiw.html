@@ -1,17 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
-
-{% block message_box %}
 <div class="container mt-4">
     <div class="message-box">
         <p class="mono-text">view_entry :: full_log_details</p>
     </div>
-</div>
-{% endblock %}
-
-{% block main_content %}
-<div class="container mt-4">
     <div class="card">
         <div class="card-body">
             <h1 id="entryTitle" class="entry-title mb-3"></h1>
@@ -28,6 +21,5 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
+<input type="hidden" id="entryData" value="{{ entry|tojson|safe }}">
 {% endblock %}

@@ -574,29 +574,68 @@ function createEntryCard(entry) {
 
 // initialize all managers on dom load
 document.addEventListener('DOMContentLoaded', () => {
-    // Only initialize managers if their respective elements exist
-    if (document.getElementById('entryForm')) {
-        new EntryManager();
-    }
-    if (document.getElementById('searchForm')) {
-        new SearchManager();
-    }
-    if (window.location.pathname === '/home') {
-        new HomeManager();
-    }
-    if (window.location.pathname.includes('/entry/')) {
+    const path = window.location.pathname;
+    
+    // Initialize appropriate class based on current path
+    if (path.includes('/project/')) {
+        initializeProjectPage();
+    } else if (path.includes('/entry/') && !path.includes('/new')) {
         new EntryViewer();
-    }
-    if (window.location.pathname === '/privacy') {
-        new PrivacyManager();
-    }
-    if (window.location.pathname === '/profile') {
-        new ProfileManager();
-    }
-    if (document.getElementById('apiKeySection')) {
-        new ProfileManager();
-    }
-    if (document.getElementById('entryForm')) {
+    } else if (path.includes('/entry/new/')) {
+        new EntryForm();
+    } else if (path === '/') {
         new LogEntry();
     }
 });
+
+function initializeProjectPage() {
+    const projectDataElem = document.getElementById('projectData');
+    if (!projectDataElem) return;
+
+    const entries = JSON.parse(projectDataElem.value);
+    const commitTimeline = document.getElementById('commitTimeline');
+    if (!commitTimeline) return;
+
+    // Group entries by commit
+    const entryMap = new Map();
+    entries.forEach(entry => {
+        if (entry.commit_sha) {
+            if (!entryMap.has(entry.commit_sha)) {
+                entryMap.set(entry.commit_sha, []);
+            }
+            entryMap.get(entry.commit_sha).push(entry);
+        }
+    });
+
+    // Add entry indicators to commits
+    document.querySelectorAll('.commit-item').forEach(commitItem => {
+        const sha = commitItem.dataset.commitSha;
+        const relatedEntries = entryMap.get(sha) || [];
+        
+        if (relatedEntries.length > 0) {
+            const entriesDiv = commitItem.querySelector('.related-entries');
+            const entryLinks = relatedEntries.map(entry => `
+                <a href="/entry/${entry.id}" class="badge bg-primary text-decoration-none me-1">
+                    ${entry.title.substring(0, 20)}${entry.title.length > 20 ? '...' : ''}
+                </a>
+            `).join('');
+            
+            entriesDiv.innerHTML = entryLinks;
+        }
+    });
+
+    // Highlight related entries when clicking a commit
+    commitTimeline.addEventListener('click', (e) => {
+        const commitItem = e.target.closest('.commit-item');
+        if (!commitItem) return;
+
+        const sha = commitItem.dataset.commitSha;
+        document.querySelectorAll('.entry-preview').forEach(entry => {
+            if (entry.dataset.commitSha === sha) {
+                entry.scrollIntoView({ behavior: 'smooth' });
+                entry.classList.add('highlight');
+                setTimeout(() => entry.classList.remove('highlight'), 2000);
+            }
+        });
+    });
+}
