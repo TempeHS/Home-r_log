@@ -8,7 +8,7 @@ import bcrypt
 
 class UserManager:
     # handles login checks and session management
-    SESSION_TIMEOUT = timedelta(hours=1)
+    SESSION_TIMEOUT = timedelta(hours=24)  
 
     @staticmethod
     def authenticate(email, password):
@@ -48,12 +48,14 @@ class UserManager:
         if 'last_active' not in session:
             return False
         
-        last_active = datetime.fromisoformat(session['last_active'])
+        last_active = datetime.fromisoformat(session.get('last_active'))
         if datetime.utcnow() - last_active > UserManager.SESSION_TIMEOUT:
             session.clear()
             return False
             
+        # Update last active time
         session['last_active'] = datetime.utcnow().isoformat()
+        session.modified = True  # Important for Flask-Session
         return True
 
     @staticmethod

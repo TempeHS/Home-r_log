@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session, redirect, url_for, jsonify, flash
+from flask import Flask, render_template, request, session, redirect, url_for, jsonify, flash, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
 from flask_login import LoginManager, login_required, current_user
@@ -13,6 +13,10 @@ from flask_mail import Mail
 from flask_migrate import Migrate
 from api.gogitter import GoGitter 
 from datetime import datetime
+from flask_session import Session  # Add this import
+from werkzeug.middleware.proxy_fix import ProxyFix
+import tempfile
+from datetime import timedelta
 
 # Configure logging
 logging.basicConfig(
@@ -39,6 +43,20 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production
 app.config['SESSION_TYPE'] = 'filesystem'
 
+# Update session configuration
+app.config.update(
+    SESSION_FILE_DIR=os.path.join(tempfile.gettempdir(), 'flask_session'),
+    SESSION_FILE_THRESHOLD=500,  # Number of files before cleanup
+    SESSION_PERMANENT=True,  # Make sessions permanent
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=24)  # Session lifetime
+)
+
+Session(app)  # Initialize Flask-Session
+
+# Add this after app creation in main.py
+app.wsgi_app = ProxyFix(
+    app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
+)
 
 # initialize mail
 mail = Mail()
@@ -63,6 +81,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # CSRF Configuration
 app.config['WTF_CSRF_CHECK_DEFAULT'] = False
 app.config['WTF_CSRF_HEADERS'] = ['X-CSRF-TOKEN']
+app.config['WTF_CSRF_SSL_STRICT'] = True  
 
 db.init_app(app)
 app.register_blueprint(api, url_prefix='/api')
@@ -80,7 +99,11 @@ def log_request():
 @app.errorhandler(Exception)
 def handle_error(error):
     logger.error(f"Error occurred: {str(error)}", exc_info=True)
-    return jsonify({"error": str(error)}), 500
+    
+    if isinstance(error, werkzeug.exceptions.HTTPException):
+        return jsonify({'error': str(error)}), error.code
+    
+    return jsonify({'error': 'Internal Server Error'}), 500
 
 def check_auth():
     return 'user_id' in session

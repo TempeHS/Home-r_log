@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 import os
 from datetime import timedelta
+import tempfile
 
 load_dotenv()
 
@@ -20,6 +21,16 @@ class Config:
     PERMANENT_SESSION_LIFETIME = timedelta(hours=1)
     REMEMBER_COOKIE_SECURE = True
     REMEMBER_COOKIE_HTTPONLY = True
+    
+    # Session Configuration
+    SESSION_TYPE = 'filesystem'
+    SESSION_FILE_DIR = os.path.join(tempfile.gettempdir(), 'flask_session')
+    SESSION_FILE_THRESHOLD = 500
+    SESSION_PERMANENT = True
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
+    SESSION_COOKIE_SECURE = True 
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
     
     # Content Security Policy
     CSP = {

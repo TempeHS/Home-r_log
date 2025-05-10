@@ -4,9 +4,10 @@ Flask-SQLAlchemy==3.1.1
 Flask-WTF==1.2.1
 Flask-Mail==0.9.1
 Flask-SSLify==0.1.5
+Flask-Session>=0.5.0
 bcrypt==4.2.1
 SQLAlchemy==2.0.25
 requests==2.31.0
-Werkzeug==3.0.1
+Werkzeug==3.0.6
 PyGithub==2.1.1
 python-dotenv==1.0.0
