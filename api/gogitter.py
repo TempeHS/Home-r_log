@@ -5,6 +5,9 @@ import os
 from dotenv import load_dotenv
 import logging
 from urllib.parse import urlparse
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # Load environment variables
 load_dotenv()
@@ -16,7 +19,23 @@ class GoGitter:
         self.token = os.getenv('GITHUB_ACCESS_TOKEN')
         if not self.token:
             raise ValueError("GitHub access token not found in environment variables")
-        self.github = Github(self.token)
+            
+        # Create session with proper retry and verification
+        self.session = requests.Session()
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504]
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("https://", adapter)
+        self.session.verify = True  # Ensure SSL verification is enabled
+        
+        self.github = Github(self.token)  # PyGithub handles its own session management
+
+    def __del__(self):
+        if hasattr(self, 'session'):
+            self.session.close()  # Ensure session is properly closed
 
     def parse_repo_url(self, url):
         """Extract owner and repo name from GitHub URL"""
@@ -41,6 +60,9 @@ class GoGitter:
         except Exception as e:
             logger.error(f"Error fetching commits: {str(e)}")
             raise
+        finally:
+            # Ensure connection pool is cleared if there were any verify=False requests
+            self.session.close()
 
     def get_repo_info(self, repo_url):
         """Get repository information"""
@@ -59,3 +81,6 @@ class GoGitter:
         except Exception as e:
             logger.error(f"Error fetching repo info: {str(e)}")
             return None
+        finally:
+            # Ensure connection pool is cleared if there were any verify=False requests
+            self.session.close()
