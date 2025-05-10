@@ -1,6 +1,16 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+{% block message_box %}
+<div class="container mt-4">
+    <div class="message-box">
+        <p class="mono-text">view_entry :: full_log_details</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block main_content %}
 <div class="container mt-4">
     <div class="card">
         <div class="card-body">
@@ -18,12 +28,6 @@
         </div>
     </div>
 </div>
-
-{% block message_box %}
-<div class="container mt-4">
-    <div class="message-box">
-        <p class="mono-text">view_entry :: full_log_details</p>
-    </div>
-</div>
 {% endblock %}
+
 {% endblock %}

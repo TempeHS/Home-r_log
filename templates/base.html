@@ -76,14 +76,36 @@
         {% endwith %}
     </div>
 
-    {% block message_box %}{% endblock %}
     <main id="main-content" class="fade-in" role="main">
-        {% block content %}{% endblock %}
+        {% block content %}
+            <!-- Message box should be part of content -->
+            {% if show_message_box %}
+            <div class="container mt-4">
+                <div class="message-box">
+                    <p class="mono-text">view_entry :: full_log_details</p>
+                </div>
+            </div>
+            {% endif %}
+            {% block main_content %}{% endblock %}
+        {% endblock %}
     </main>
 
     <!-- Update the script imports at the bottom of the file -->
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/auth.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/js/serviceWorker.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registered:', registration);
+                    })
+                    .catch(error => {
+                        console.log('ServiceWorker registration failed:', error);
+                    });
+            });
+        }
+    </script>
 </body>
 </html>

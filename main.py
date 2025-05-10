@@ -128,11 +128,13 @@ def home():
 def view_entry(entry_id):
     try:
         entry = LogEntry.query.get_or_404(entry_id)
-        return render_template('entry_veiw.html', entry=entry)
+        return render_template('entry_veiw.html', #veiw!!!!!!
+                             entry=entry.to_dict(),  # Convert to dict for JSON serialization
+                             show_message_box=True)
     except Exception as e:
-        logger.error(f"Error viewing entry {entry_id}: {str(e)}")
-        flash('Error viewing entry', 'error')
-        return redirect(url_for('projects'))
+        logger.error(f"Error viewing entry: {str(e)}", exc_info=True)
+        flash('Error loading entry', 'error')
+        return redirect(url_for('index'))
 
 @app.route('/profile')
 def profile():
