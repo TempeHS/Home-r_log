@@ -10,6 +10,8 @@
 	"terminal.integrated.defaultProfile.windows": "Git Bash",
 	"window.restoreWindows": "preserve",
 	"workbench.editorAssociations": {
-        	"*.md": "vscode.markdown.preview.editor"
-    	}
+		"*.md": "vscode.markdown.preview.editor",
+		"*.copilotmd": "vscode.markdown.preview.editor",
+		"*.db": "default"
+	}
 }

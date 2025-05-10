@@ -1,8 +1,13 @@
 from flask import Blueprint
 
-api = Blueprint('api', __name__)
+api = Blueprint('api', __name__, url_prefix='/api')
 
+# Import and register blueprints
 from . import auth, entries, search
+from .interactions import interactions_bp
+
+# Register the interactions blueprint without additional prefix since api already has /api
+api.register_blueprint(interactions_bp, url_prefix='/')
 
 #basic blueprint for all api routes
 

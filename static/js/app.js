@@ -514,6 +514,181 @@ class ProfileManager {
     }
 }
 
+class ReactionManager {
+    constructor() {
+        this.bindReactionEvents();
+    }
+
+    bindReactionEvents() {
+        // Delegate event handling to the document for dynamically loaded content
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('.reaction-btn')) {
+                this.handleReaction(e);
+            }
+        });
+    }
+
+    async handleReaction(e) {
+        e.preventDefault();
+        const button = e.target.closest('.reaction-btn');
+        const entryId = button.dataset.entryId;
+        const reactionType = button.dataset.reactionType;
+        const counterElement = button.querySelector('.reaction-count');
+
+        try {
+            const response = await fetch(`/api/entries/${entryId}/react`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ reaction_type: reactionType }),
+            });
+
+            if (!response.ok) throw new Error('Failed to update reaction');
+            
+            const data = await response.json();
+            // Update the reaction counts
+            const likesCount = button.closest('.reactions').querySelector('.likes-count');
+            const dislikesCount = button.closest('.reactions').querySelector('.dislikes-count');
+            
+            if (likesCount) likesCount.textContent = data.likes_count;
+            if (dislikesCount) dislikesCount.textContent = data.dislikes_count;
+
+            // Toggle active state
+            button.classList.toggle('active', data.user_reaction === reactionType);
+        } catch (error) {
+            console.error('Error updating reaction:', error);
+            alert('Failed to update reaction. Please try again.');
+        }
+    }
+}
+
+class CommentManager {
+    constructor() {
+        this.bindCommentEvents();
+    }
+
+    bindCommentEvents() {
+        document.addEventListener('submit', (e) => {
+            if (e.target.matches('.comment-form')) {
+                e.preventDefault();
+                this.handleCommentSubmit(e.target);
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('.reply-button')) {
+                this.toggleReplyForm(e.target);
+            }
+        });
+    }
+
+    async handleCommentSubmit(form) {
+        const entryId = form.dataset.entryId;
+        const parentId = form.dataset.parentId || null;
+        const content = form.querySelector('textarea').value;
+
+        try {
+            const response = await fetch(`/api/entries/${entryId}/comments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    content,
+                    parent_id: parentId
+                }),
+            });
+
+            if (!response.ok) throw new Error('Failed to post comment');
+            
+            const comment = await response.json();
+            this.addCommentToDOM(comment, parentId);
+            form.reset();
+        } catch (error) {
+            console.error('Error posting comment:', error);
+            alert('Failed to post comment. Please try again.');
+        }
+    }
+
+    toggleReplyForm(button) {
+        const commentId = button.dataset.commentId;
+        const replyForm = document.querySelector(`.reply-form[data-parent-id="${commentId}"]`);
+        
+        if (replyForm) {
+            replyForm.classList.toggle('d-none');
+            const textarea = replyForm.querySelector('textarea');
+            if (!replyForm.classList.contains('d-none')) {
+                textarea.focus();
+            }
+        }
+    }
+
+    addCommentToDOM(comment, parentId) {
+        const commentHtml = this.createCommentHTML(comment);
+        
+        if (parentId) {
+            // Add reply to parent comment
+            const parentComment = document.querySelector(`.comment[data-comment-id="${parentId}"]`);
+            const repliesContainer = parentComment.querySelector('.replies');
+            repliesContainer.insertAdjacentHTML('beforeend', commentHtml);
+        } else {
+            // Add top-level comment
+            const commentsContainer = document.querySelector(`#comments-${comment.entry_id}`);
+            commentsContainer.insertAdjacentHTML('beforeend', commentHtml);
+        }
+    }
+
+    createCommentHTML(comment) {
+        return `
+            <div class="comment mb-3" data-comment-id="${comment.id}">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            ${comment.user_id} • ${new Date(comment.timestamp).toLocaleString()}
+                        </h6>
+                        <p class="card-text">${this.escapeHtml(comment.content)}</p>
+                        <button class="btn btn-sm btn-outline-primary reply-button" 
+                                data-comment-id="${comment.id}">
+                            Reply
+                        </button>
+                        <form class="reply-form mt-2 d-none" 
+                              data-entry-id="${comment.entry_id}"
+                              data-parent-id="${comment.id}">
+                            <div class="form-group">
+                                <textarea class="form-control" 
+                                          rows="2" 
+                                          required 
+                                          placeholder="Write a reply..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm mt-2">Post Reply</button>
+                        </form>
+                        <div class="replies ml-4 mt-3">
+                            ${comment.replies ? comment.replies.map(reply => this.createCommentHTML(reply)).join('') : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    escapeHtml(unsafe) {
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/<//g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+}
+
+// Initialize managers only if not already initialized by EntryViewer
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window.entryViewer) {
+        new ReactionManager();
+    }
+});
+
 // utility functions
 function escapeHtml(unsafe) { // prevents xss in dynamic stuff
     return unsafe

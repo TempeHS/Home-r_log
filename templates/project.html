@@ -40,7 +40,7 @@
                                 <p>{{ entry.content[:200] }}{% if entry.content|length > 200 %}...{% endif %}</p>
                                 <div class="entry-metadata">
                                     <span class="developer-tag">{{ entry.developer_tag }}</span>
-                                    <small class="text-muted">{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    <small class="text-muted">{{ entry.timestamp|format_date }}</small>
                                 </div>
                             </div>
                         </div>

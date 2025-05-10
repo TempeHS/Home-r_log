@@ -175,7 +175,7 @@ h1, h2, h3, h4, h5, h6,
 
 .btn-primary {
     background-color: var(--yellow);
-    border-color: var(--yellow);
+    border-color: var (--yellow);
     color: var(--dark);
     font-weight: 500;
 }
@@ -491,4 +491,103 @@ small,
     white-space: pre-wrap;
     max-height: 100px;
     overflow-y: auto;
+}
+
+/* Reactions and Comments Styles */
+.reactions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.reaction-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s ease;
+    position: relative;
+    min-width: 80px;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.reaction-btn:hover {
+    transform: translateY(-2px);
+}
+
+.reaction-btn i {
+    font-size: 1.2rem;
+    pointer-events: none;
+}
+
+.reaction-btn .reaction-count {
+    pointer-events: none;
+}
+
+.reaction-btn.active {
+    transform: scale(1.05);
+}
+
+.reaction-btn[data-reaction-type="like"].active {
+    background-color: var(--bs-primary);
+    color: var(--white);
+    border-color: var(--bs-primary);
+}
+
+.reaction-btn[data-reaction-type="dislike"].active {
+    background-color: var(--bs-danger);
+    color: var(--white);
+    border-color: var(--bs-danger);
+}
+
+.comments-section {
+    border-top: 1px solid var(--border);
+    padding-top: 2rem;
+    margin-top: 2rem;
+}
+
+.comment {
+    transition: all 0.2s ease;
+}
+
+.comment .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+}
+
+.comment .card-body {
+    padding: 1.25rem;
+}
+
+.replies {
+    border-left: 2px solid var(--border);
+    padding-left: 1.5rem;
+}
+
+.reply-form textarea {
+    background: var(--darker);
+    color: var(--white);
+    border-color: var(--border);
+}
+
+.reply-form textarea:focus {
+    background: var(--darker);
+    color: var(--white);
+    border-color: var(--yellow);
+    box-shadow: 0 0 0 0.2rem rgba(255, 215, 0, 0.25);
+}
+
+.comment-form textarea {
+    background: var(--darker);
+    color: var(--white);
+    border-color: var(--border);
+    resize: vertical;
+}
+
+.comment-form textarea:focus {
+    background: var(--darker);
+    color: var(--white);
+    border-color: var(--yellow);
+    box-shadow: 0 0 0 0.2rem rgba(255, 215, 0, 0.25);
 }

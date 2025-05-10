@@ -15,6 +15,7 @@ from api.gogitter import GoGitter
 from datetime import datetime
 from flask_session import Session  # Add this import
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.exceptions import HTTPException  # Add this import
 import tempfile
 from datetime import timedelta
 
@@ -100,7 +101,7 @@ def log_request():
 def handle_error(error):
     logger.error(f"Error occurred: {str(error)}", exc_info=True)
     
-    if isinstance(error, werkzeug.exceptions.HTTPException):
+    if isinstance(error, HTTPException):
         return jsonify({'error': str(error)}), error.code
     
     return jsonify({'error': 'Internal Server Error'}), 500
@@ -151,11 +152,17 @@ def home():
 def view_entry(entry_id):
     try:
         entry = LogEntry.query.get_or_404(entry_id)
-        return render_template('entry_veiw.html', #veiw!!!!!!
-                             entry=entry.to_dict(),  # Convert to dict for JSON serialization
-                             show_message_box=True)
+        entry_data = entry.to_dict()
+        entry_data['user_reaction'] = entry.get_user_reaction(current_user.developer_tag)
+        entry_data['likes_count'] = entry.reactions.filter_by(reaction_type='like').count()
+        entry_data['dislikes_count'] = entry.reactions.filter_by(reaction_type='dislike').count()
+        
+        app.logger.debug(f"Entry data: {entry_data}")
+        return render_template('entry_veiw.html',
+                            entry=entry_data,
+                            show_message_box=True)
     except Exception as e:
-        logger.error(f"Error viewing entry: {str(e)}", exc_info=True)
+        app.logger.error(f"Error viewing entry: {str(e)}", exc_info=True)
         flash('Error loading entry', 'error')
         return redirect(url_for('index'))
 
@@ -191,7 +198,7 @@ def view_project(project_name):
                 'sha': commit.sha,
                 'message': commit.commit.message,
                 'author': commit.commit.author.name,
-                'date': commit.commit.author.date.isoformat(),
+                'date': commit.commit.author.date.isoformat() if hasattr(commit.commit.author.date, 'isoformat') else str(commit.commit.author.date),
                 'url': commit.html_url
             })
     except Exception as e:
@@ -301,15 +308,17 @@ def get_project_commits(project_name):
         return jsonify({'error': str(e)}), 500
 
 @app.template_filter('format_date')
-def format_date(value, format='%Y-%m-%d'):
+def format_date(value, format='%Y-%m-%d %H:%M'):
+    if not value:
+        return ''
     if isinstance(value, str):
         try:
-            value = datetime.fromisoformat(value)
+            value = datetime.fromisoformat(value.replace('Z', '+00:00'))
         except ValueError:
             return value
     if isinstance(value, datetime):
         return value.strftime(format)
-    return value
+    return str(value)
 
 #HAVE THIS AT THE END!!!!
 if __name__ == '__main__':

@@ -167,7 +167,9 @@ def get_entry(entry_id):
 
     try:
         entry = LogEntry.query.get_or_404(entry_id)
-        return jsonify(entry.to_dict())
+        entry_data = entry.to_dict()
+        entry_data['user_reaction'] = entry.get_user_reaction(user.developer_tag)
+        return jsonify(entry_data)
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
