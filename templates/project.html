@@ -29,7 +29,7 @@
                 </div>
                 <div class="card-body entries-scroll">
                     {% for entry in entries %}
-                    <div class="entry-preview mb-4" data-commit-sha="{{ entry.commit_sha }}">
+                    <div class="entry-preview mb-4" data-entry-id="{{ entry.id }}" data-commit-sha="{{ entry.commit_sha }}">
                         <div class="card">
                             <div class="card-header">
                                 <a href="{{ url_for('view_entry', entry_id=entry.id) }}" class="text-decoration-none">

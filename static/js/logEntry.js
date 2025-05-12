@@ -1,9 +1,17 @@
+let instance = null;
+
 export class LogEntry {
     constructor() {
+        // Return existing instance if one exists
+        if (instance) {
+            return instance;
+        }
+        instance = this;
+
         this.setupUI();
         this.bindEvents();
         this.initializeTimestamps();
-        if (this.projectSelect.value) {
+        if (this.projectSelect?.value) {
             this.loadCommits();
         }
     }

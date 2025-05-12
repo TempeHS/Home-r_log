@@ -53,13 +53,27 @@ export class ProjectView {
                 // clear existing entries
                 relatedEntriesDiv.innerHTML = '';
                 
-                // add entries
+                // add entries with correct URL pattern
                 entries.forEach(entry => {
                     const entryLink = document.createElement('a');
-                    entryLink.href = `/entries/${entry.id}`;
+                    entryLink.href = `/entry/${entry.id}`; // Updated to match Flask route
                     entryLink.className = 'badge bg-primary me-1 text-decoration-none entry-link';
                     entryLink.textContent = entry.title;
+                    entryLink.dataset.entryId = entry.id;
                     relatedEntriesDiv.appendChild(entryLink);
+
+                    // Add click handler for smooth scrolling
+                    entryLink.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const targetEntry = document.querySelector(`.entry-preview[data-entry-id="${entry.id}"]`);
+                        if (targetEntry) {
+                            targetEntry.scrollIntoView({ behavior: 'smooth' });
+                            targetEntry.classList.add('highlight');
+                            setTimeout(() => targetEntry.classList.remove('highlight'), 2000);
+                        } else {
+                            window.location.href = entryLink.href; // Fallback to regular navigation
+                        }
+                    });
                 });
             }
         });
