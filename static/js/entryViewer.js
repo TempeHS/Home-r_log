@@ -184,97 +184,87 @@ class ReactionManager {
     }
 
     async handleReaction(button) {
-        const entryId = button.dataset.entryId;
-        const reactionType = button.dataset.reactionType;
-        const reactionsContainer = button.closest('.reactions');
-        const isActive = button.classList.contains('active');
-        const otherType = reactionType === 'like' ? 'dislike' : 'like';
-        const otherButton = reactionsContainer.querySelector(`[data-reaction-type="${otherType}"]`);
-        const otherWasActive = otherButton.classList.contains('active');
-        
-        // Get current counts
-        const likesCount = reactionsContainer.querySelector('.likes-count');
-        const dislikesCount = reactionsContainer.querySelector('.dislikes-count');
-        let likes = parseInt(likesCount.textContent);
-        let dislikes = parseInt(dislikesCount.textContent);
+        try {
+            const entryId = button.dataset.entryId;
+            const reactionType = button.dataset.reactionType;
+            const reactionsContainer = button.closest('.reactions');
+            const isActive = button.classList.contains('active');
+            const otherType = reactionType === 'like' ? 'dislike' : 'like';
+            const otherButton = reactionsContainer.querySelector(`[data-reaction-type="${otherType}"]`);
+            const otherWasActive = otherButton.classList.contains('active');
+            
+            // get current tally
+            const likesCount = reactionsContainer.querySelector('.likes-count');
+            const dislikesCount = reactionsContainer.querySelector('.dislikes-count');
+            let likes = parseInt(likesCount.textContent);
+            let dislikes = parseInt(dislikesCount.textContent);
 
-        // Clear active states first
-        reactionsContainer.querySelectorAll('.reaction-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-
-        // Calculate new counts based on all cases
-        if (reactionType === 'like') {
-            if (isActive) {
-                // Removing like
-                likes--;
-            } else {
-                // Adding like
-                likes++;
-                if (otherWasActive) {
-                    // Was disliked before, remove dislike
-                    dislikes--;
-                }
-                button.classList.add('active');
-            }
-        } else {  // dislike
-            if (isActive) {
-                // Removing dislike
-                dislikes--;
-            } else {
-                // Adding dislike
-                dislikes++;
-                if (otherWasActive) {
-                    // Was liked before, remove like
-                    likes--;
-                }
-                button.classList.add('active');
-            }
-        }
-
-        // Update the UI with new counts
-        likesCount.textContent = likes;
-        dislikesCount.textContent = dislikes;
-
-        // Send update to server
-        const response = await fetch(`/api/entries/${entryId}/react`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ reaction_type: reactionType }),
-        });
-
-        const data = await response.json();
-        console.log('Reaction response:', data);
-
-        if (!response.ok) {
-            // If server update fails, revert the UI changes
-            likesCount.textContent = data.likes_count;
-            dislikesCount.textContent = data.dislikes_count;
+            // clear active
             reactionsContainer.querySelectorAll('.reaction-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            if (data.user_reaction) {
-                const activeButton = reactionsContainer.querySelector(`[data-reaction-type="${data.user_reaction}"]`);
-                if (activeButton) activeButton.classList.add('active');
+
+            // brute force calculation
+            if (reactionType === 'like') {
+                if (isActive) {
+                    // Removing like
+                    likes--;
+                } else {
+                    // Adding like
+                    likes++;
+                    if (otherWasActive) {
+                        // Was disliked before, remove dislike
+                        dislikes--;
+                    }
+                    button.classList.add('active');
+                }
+            } else {  // dislike
+                if (isActive) {
+                    // Removing dislike
+                    dislikes--;
+                } else {
+                    // Adding dislike
+                    dislikes++;
+                    if (otherWasActive) {
+                        // Was liked before, remove like
+                        likes--;
+                    }
+                    button.classList.add('active');
+                }
             }
-            throw new Error(data.error || 'Failed to update reaction');
-        }
-    } catch (error) {
-        console.error('Error updating reaction:', error);
-        // Revert UI changes on error
-        const response = await fetch(`/api/entries/${entryId}`, { method: 'GET' });
-        if (response.ok) {
+
+            // Update the UI with new counts
+            likesCount.textContent = likes;
+            dislikesCount.textContent = dislikes;
+
+            // Send update to server
+            const response = await fetch(`/api/entries/${entryId}/react`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ reaction_type: reactionType }),
+            });
+
             const data = await response.json();
-            likesCount.textContent = data.likes_count;
-            dislikesCount.textContent = data.dislikes_count;
-            if (data.user_reaction) {
-                const activeButton = reactionsContainer.querySelector(`[data-reaction-type="${data.user_reaction}"]`);
-                if (activeButton) activeButton.classList.add('active');
+            console.log('Reaction response:', data);
+
+            if (!response.ok) {
+                // If server update fails, revert the UI changes
+                likesCount.textContent = data.likes_count;
+                dislikesCount.textContent = data.dislikes_count;
+                reactionsContainer.querySelectorAll('.reaction-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                if (data.user_reaction) {
+                    const activeButton = reactionsContainer.querySelector(`[data-reaction-type="${data.user_reaction}"]`);
+                    if (activeButton) activeButton.classList.add('active');
+                }
+                throw new Error(data.error || 'Failed to update reaction');
             }
+        } catch (error) {
+            console.error('Error handling reaction:', error);
         }
-        alert(error.message || 'Failed to update reaction. Please try again.');
     }
 }
 

@@ -3,7 +3,9 @@ export class LogEntry {
         this.setupUI();
         this.bindEvents();
         this.initializeTimestamps();
-        this.loadCommits();
+        if (this.projectSelect.value) {
+            this.loadCommits();
+        }
     }
 
     setupUI() {
@@ -24,7 +26,7 @@ export class LogEntry {
     bindEvents() {
         if (this.form) {
             this.form.addEventListener('submit', this.handleSubmit.bind(this));
-            this.projectSelect.addEventListener('change', this.loadCommits.bind(this));
+            this.projectSelect.addEventListener('change', () => this.loadCommits());
         }
     }
 
@@ -40,21 +42,28 @@ export class LogEntry {
     }
 
     async loadCommits() {
-        const projectName = this.projectSelect.value;
-        if (!projectName || !this.commitSelect) return;
-
         try {
-            const response = await fetch(`/api/projects/${projectName}/commits`);
-            if (!response.ok) throw new Error('Failed to load commits');
+            const projectName = this.projectSelect.value;
+            if (!projectName) return;
+
+            console.log("Fetching commits for project:", projectName);
+            
+            const response = await fetch(`/api/projects/${encodeURIComponent(projectName)}/commits`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             
             const commits = await response.json();
+            console.log("Received commits:", commits);
             
-            this.commitSelect.innerHTML = '<option value="">No commit selected</option>';
+            // clear options
+            this.commitSelect.innerHTML = '<option value="">Select a commit (optional)</option>';
+            
+            // update commit
             commits.forEach(commit => {
                 const option = document.createElement('option');
                 option.value = commit.sha;
-                const formattedDate = this.formatDate(commit.date);
-                option.textContent = `[${commit.sha.substring(0,7)}] ${commit.message} (${formattedDate})`;
+                option.textContent = `${commit.message.split('\n')[0]} (${commit.author})`;
                 this.commitSelect.appendChild(option);
             });
         } catch (error) {

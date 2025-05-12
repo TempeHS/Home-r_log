@@ -30,8 +30,8 @@
 
         <div class="form-group mb-3">
             <label for="commitSelect" class="form-label">related commit</label>
-            <select class="form-control" id="commitSelect" name="commit">
-                <option value="">No commit selected</option>
+            <select class="form-control" id="commitSelect" name="commit_sha">
+                <option value="">Select a commit (optional)</option>
             </select>
             <small class="form-text text-muted">Select a related commit (optional)</small>
         </div>
@@ -69,8 +69,6 @@
         <button type="submit" class="btn btn-primary">create_entry()</button>
     </form>
 </div>
-
-
 {% endblock %}
 
 {% block message_box %}
@@ -79,4 +77,8 @@
         <p class="mono-text">new_entry :: what'd_ya_do?</p>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/app.js') }}"></script>
 {% endblock %}

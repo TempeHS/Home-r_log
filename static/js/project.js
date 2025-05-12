@@ -1,61 +1,72 @@
 export class ProjectView {
     constructor() {
         this.commitTimeline = document.getElementById('commitTimeline');
+        console.log("ProjectView initialized");
         this.initializeEntryMapping();
-        this.bindEvents();
     }
 
     initializeEntryMapping() {
-        const entries = JSON.parse(document.getElementById('entriesData').textContent);
-        this.entryMap = new Map();
-        
-        entries.forEach(entry => {
-            if (entry.commit_sha) {
-                if (!this.entryMap.has(entry.commit_sha)) {
-                    this.entryMap.set(entry.commit_sha, []);
+        try {
+            const projectDataElement = document.getElementById('projectData');
+            if (!projectDataElement) {
+                console.error("Project data element not found");
+                return;
+            }
+
+            const rawData = projectDataElement.value;
+            console.log("Raw project data:", rawData);
+
+            const entries = JSON.parse(rawData);
+            console.log("Parsed entries:", entries);
+
+            // create mapping of commit SHAs to entries
+            this.entryMap = entries.reduce((map, entry) => {
+                if (entry.commit_sha) {
+                    if (!map.has(entry.commit_sha)) {
+                        map.set(entry.commit_sha, []);
+                    }
+                    map.get(entry.commit_sha).push(entry);
                 }
-                this.entryMap.get(entry.commit_sha).push(entry);
-            }
-        });
+                return map;
+            }, new Map());
 
-        this.updateCommitEntries();
-    }
-
-    updateCommitEntries() {
-        document.querySelectorAll('.commit-item').forEach(commitItem => {
-            const sha = commitItem.dataset.commitSha;
-            const relatedEntries = this.entryMap.get(sha) || [];
-            
-            if (relatedEntries.length > 0) {
-                const entriesDiv = commitItem.querySelector('.related-entries');
-                const entryLinks = relatedEntries.map(entry => `
-                    <a href="/entry/${entry.id}" class="badge bg-primary text-decoration-none me-1">
-                        ${entry.title}
-                    </a>
-                `).join('');
-                
-                entriesDiv.innerHTML = entryLinks;
-            }
-        });
-    }
-
-    bindEvents() {
-        if (this.commitTimeline) {
-            this.commitTimeline.addEventListener('click', this.handleCommitClick.bind(this));
+            console.log("Entry mapping created");
+            this.updateCommitEntries();
+        } catch (error) {
+            console.error("Error initializing entry mapping:", error);
+            console.log("Project data element value:", document.getElementById('projectData')?.value);
         }
     }
 
-    handleCommitClick(e) {
-        const commitItem = e.target.closest('.commit-item');
-        if (!commitItem) return;
+    updateCommitEntries() {
+        const commitElements = document.querySelectorAll('.commit-item');
+        console.log(`Found ${commitElements.length} commit elements`);
 
-        const sha = commitItem.dataset.commitSha;
-        document.querySelectorAll('.entry-preview').forEach(entry => {
-            if (entry.dataset.commitSha === sha) {
-                entry.scrollIntoView({ behavior: 'smooth' });
-                entry.classList.add('highlight');
-                setTimeout(() => entry.classList.remove('highlight'), 2000);
+        commitElements.forEach(commit => {
+            const commitSha = commit.dataset.commitSha;
+            const entries = this.entryMap.get(commitSha) || [];
+            const relatedEntriesDiv = commit.querySelector('.related-entries');
+
+            console.log(`Processing commit ${commitSha}: ${entries.length} related entries`);
+
+            if (entries.length > 0 && relatedEntriesDiv) {
+                // clear existing entries
+                relatedEntriesDiv.innerHTML = '';
+                
+                // add entries
+                entries.forEach(entry => {
+                    const entryLink = document.createElement('a');
+                    entryLink.href = `/entries/${entry.id}`;
+                    entryLink.className = 'badge bg-primary me-1 text-decoration-none entry-link';
+                    entryLink.textContent = entry.title;
+                    relatedEntriesDiv.appendChild(entryLink);
+                });
             }
         });
     }
 }
+
+// initialize asap
+document.addEventListener('DOMContentLoaded', () => {
+    new ProjectView();
+});

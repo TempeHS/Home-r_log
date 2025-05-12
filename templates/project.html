@@ -78,6 +78,15 @@
         </div>
     </div>
 </div>
-<input type="hidden" id="projectData" value="{{ entries|tojson|safe }}">
+<input type="hidden" id="projectData" value='{{ entries|tojson|safe }}'>
 
+{% endblock %}
+
+{% block scripts %}
+<script type="module">
+    import { ProjectView } from "{{ url_for('static', filename='js/project.js') }}";
+    document.addEventListener('DOMContentLoaded', () => {
+        new ProjectView();
+    });
+</script>
 {% endblock %}

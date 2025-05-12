@@ -106,7 +106,12 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .entry-preview.highlight {
-    animation: highlight 2s ease-in-out;
+    animation: highlightEntry 2s ease-out;
+}
+
+@keyframes highlightEntry {
+    0% { background-color: rgba(13, 110, 253, 0.2); }
+    100% { background-color: transparent; }
 }
 
 @keyframes highlight {
@@ -227,6 +232,35 @@ h1, h2, h3, h4, h5, h6,
 .entry-content {
     color: var(--bs-secondary);
     margin-bottom: 0;
+}
+
+.entry-link:hover {
+    cursor: pointer;
+    opacity: 0.8;
+}
+
+.related-entries {
+    margin-top: 0.5rem;
+}
+
+.related-entries .entry-link {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    font-size: 0.75em;
+    background-color: var(--bs-primary);
+    color: var(--white);
+    text-decoration: none;
+    border-radius: 0.25rem;
+    transition: opacity 0.2s ease;
+}
+
+.related-entries .entry-link:hover {
+    opacity: 0.8;
+    text-decoration: none;
+}
+
+.badge.entry-link {
+    transition: all 0.2s ease;
 }
 
 /* metadata */

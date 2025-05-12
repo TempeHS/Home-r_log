@@ -1,3 +1,5 @@
+import { LogEntry } from './logEntry.js';
+
 // core app functionality classes and utilities
 class EntryManager {
     constructor() {
@@ -628,12 +630,10 @@ class CommentManager {
         const commentHtml = this.createCommentHTML(comment);
         
         if (parentId) {
-            // Add reply to parent comment
             const parentComment = document.querySelector(`.comment[data-comment-id="${parentId}"]`);
             const repliesContainer = parentComment.querySelector('.replies');
             repliesContainer.insertAdjacentHTML('beforeend', commentHtml);
         } else {
-            // Add top-level comment
             const commentsContainer = document.querySelector(`#comments-${comment.entry_id}`);
             commentsContainer.insertAdjacentHTML('beforeend', commentHtml);
         }
@@ -782,7 +782,7 @@ function initializeProjectPage() {
         }
     });
 
-    // Add entry indicators to commits
+    // add entry indicators to commits
     document.querySelectorAll('.commit-item').forEach(commitItem => {
         const sha = commitItem.dataset.commitSha;
         const relatedEntries = entryMap.get(sha) || [];
@@ -799,7 +799,7 @@ function initializeProjectPage() {
         }
     });
 
-    // Highlight related entries when clicking a commit
+    // highlight related entries when clicking a commit
     commitTimeline.addEventListener('click', (e) => {
         const commitItem = e.target.closest('.commit-item');
         if (!commitItem) return;
@@ -814,3 +814,11 @@ function initializeProjectPage() {
         });
     });
 }
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+    const entryForm = document.getElementById('entryForm');
+    if (entryForm) {
+        new LogEntry();
+    }
+});
