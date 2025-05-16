@@ -455,6 +455,17 @@ small,
     padding-right: 10px;
 }
 
+.observer-target {
+    height: 20px;
+    margin-top: 10px;
+}
+
+.commits-scroll {
+    position: relative;
+    overflow-y: auto;
+    max-height: calc(100vh - 200px);
+}
+
 /* Scrollbar styling */
 .entries-scroll::-webkit-scrollbar,
 .commits-scroll::-webkit-scrollbar {
@@ -624,4 +635,10 @@ small,
     color: var(--white);
     border-color: var(--yellow);
     box-shadow: 0 0 0 0.2rem rgba(255, 215, 0, 0.25);
+}
+
+.loading-indicator {
+    text-align: center;
+    padding: 1rem;
+    color: var(--bs-secondary);
 }

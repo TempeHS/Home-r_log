@@ -392,8 +392,31 @@ class ProfileManager {
     }
 
     bindApiKeyEvents() {
-        document.getElementById('generateApiKey')?.addEventListener('click', () => this.handleGenerateKey());
-        document.getElementById('regenerateApiKey')?.addEventListener('click', () => this.handleRegenerateKey());
+        const generateBtn = document.getElementById('generateApiKey');
+        if (generateBtn) {
+            generateBtn.addEventListener('click', async () => {
+                try {
+                    const response = await fetch('/api/user/generate-key', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                        }
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        // Option 1: Reload to show the new key
+                        window.location.reload();
+                        // Option 2: Show the key directly (uncomment if you want to display without reload)
+                        // document.getElementById('apiKeySection').innerText = data.key;
+                    } else {
+                        showNotification(data.error || 'Failed to generate API key', 'danger');
+                    }
+                } catch (err) {
+                    showNotification('Network error while generating API key', 'danger');
+                }
+            });
+        }
     }
 
     bind2FAEvents() {
@@ -441,33 +464,6 @@ class ProfileManager {
                 this.showNotification('2FA enabled successfully', 'success');
             }
         });
-    }
-
-    async handleGenerateKey() {
-        try {
-            const response = await fetch('/api/user/generate-key', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                }
-            });
-            
-            if (response.ok) {
-                this.showNotification('API key generated successfully', 'success');
-                location.reload();
-            } else {
-                const data = await response.json();
-                throw new Error(data.error || 'Failed to generate API key');
-            }
-        } catch (error) {
-            this.logError(error, 'API Key Generation');
-        }
-    }
-
-    async handleRegenerateKey() {
-        if (confirm('Are you sure? Current API key will be invalidated.')) {
-            await this.handleGenerateKey();
-        }
     }
 
     async loadProfileData() {
@@ -820,5 +816,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const entryForm = document.getElementById('entryForm');
     if (entryForm) {
         new LogEntry();
+    }
+});
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('apiKeySection')) {
+        window.profileManager = new ProfileManager();
     }
 });

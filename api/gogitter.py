@@ -38,31 +38,42 @@ class GoGitter:
             self.session.close()  # Ensure session is properly closed
 
     def parse_repo_url(self, url):
-        """Extract owner and repo name from GitHub URL"""
+        # parse the GitHub repository URL 
         parsed = urlparse(url)
         path_parts = parsed.path.strip('/').split('/')
         if len(path_parts) < 2:
             raise ValueError(f"Invalid GitHub repository URL: {url}")
         return path_parts[0], path_parts[1]
 
-    def get_commit_history(self, repo_url, limit=10):
-        """Get recent commits for a repository"""
+    def get_commit_history(self, repo_url, page=1, per_page=10):
+        """Get commit history for a given repository with pagination"""
         try:
             owner, repo_name = self.parse_repo_url(repo_url)
-            logger.info(f"Fetching commits for {owner}/{repo_name}")
+            logger.info(f"Fetching commits for {owner}/{repo_name} - page {page}")
             
             repo = self.github.get_repo(f"{owner}/{repo_name}")
-            commits = list(repo.get_commits()[:limit])
+            # Calculate pagination offsets
+            start = (page - 1) * per_page
+            end = start + per_page
+            commits = list(repo.get_commits().get_page(page-1))
+
+            commits_paginated = repo.get_commits()
             
+            # Get total count for pagination
+            total_commits = commits_paginated.totalCount
+            
+            # Calculate if there are more pages
+            has_more = (page * per_page) < total_commits
+        
+            # Get specific page of commits
+            commits = list(commits_paginated.get_page(page-1))
+
             logger.info(f"Retrieved {len(commits)} commits")
-            return commits
+            return commits, has_more
             
         except Exception as e:
             logger.error(f"Error fetching commits: {str(e)}")
             raise
-        finally:
-            # Ensure connection pool is cleared if there were any verify=False requests
-            self.session.close()
 
     def get_repo_info(self, repo_url):
         """Get repository information"""

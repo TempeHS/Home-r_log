@@ -1,8 +1,13 @@
 export class ProjectView {
     constructor() {
         this.commitTimeline = document.getElementById('commitTimeline');
-        console.log("ProjectView initialized");
+        this.currentPage = 1;
+        this.loading = false;
+        this.hasMore = true;
+        this.projectName = document.querySelector('[data-project-name]')?.dataset.projectName;
+        
         this.initializeEntryMapping();
+        this.bindInfiniteScroll();
     }
 
     initializeEntryMapping() {
@@ -77,6 +82,67 @@ export class ProjectView {
                 });
             }
         });
+    }
+
+    bindInfiniteScroll() {
+        const commitsContainer = document.querySelector('.commits-scroll');
+        if (!commitsContainer) return;
+
+        // Use Intersection Observer for infinite scroll
+        const observer = new IntersectionObserver(entries => {
+            const lastEntry = entries[0];
+            if (lastEntry.isIntersecting && this.hasMore && !this.loading) {
+                this.loadMoreCommits();
+            }
+        }, { threshold: 0.5 });
+
+        // Observe the last commit item
+        const observerTarget = document.createElement('div');
+        observerTarget.className = 'observer-target';
+        commitsContainer.appendChild(observerTarget);
+        observer.observe(observerTarget);
+    }
+
+    async loadMoreCommits() {
+        if (this.loading || !this.hasMore) return;
+        
+        this.loading = true;
+        try {
+            const response = await fetch(`/api/projects/${this.projectName}/commits?page=${this.currentPage + 1}`);
+            const data = await response.json();
+            
+            if (data.error) throw new Error(data.error);
+            
+            this.hasMore = data.has_more;
+            this.currentPage++;
+            
+            // Append new commits
+            this.appendCommits(data.commits);
+            
+        } catch (error) {
+            console.error('Error loading more commits:', error);
+        } finally {
+            this.loading = false;
+        }
+    }
+
+    appendCommits(commits) {
+        commits.forEach(commit => {
+            const commitElement = document.createElement('div');
+            commitElement.className = 'commit-item mb-3';
+            commitElement.dataset.commitSha = commit.sha;
+            
+            commitElement.innerHTML = `
+                <div class="commit-message">${commit.message}</div>
+                <small class="text-muted">by ${commit.author}</small>
+                <div class="related-entries mt-2"></div>
+            `;
+            
+            this.commitTimeline.appendChild(commitElement);
+        });
+        
+        // Update entry mappings for new commits
+        this.updateCommitEntries();
     }
 }
 

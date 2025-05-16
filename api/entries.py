@@ -19,52 +19,38 @@ logger = logging.getLogger(__name__)
 @login_required
 def create_entry():
     logger.info("=== CREATE ENTRY REQUEST RECEIVED ===")
-    logger.info(f"Request method: {request.method}")
-    logger.info(f"Content-Type: {request.headers.get('Content-Type')}")
     
     try:
         data = request.get_json()
         if not data:
             logger.error("No JSON data received")
             return jsonify({'error': 'No data provided'}), 400
-            
-        logger.info(f"Parsed request data: {json.dumps(data, indent=2)}")
 
-        # Validate required fields
-        required_fields = ['title', 'content', 'project_name', 'start_time', 'end_time', 'time_worked']
-        missing_fields = [field for field in required_fields if field not in data]
-        
-        if missing_fields:
-            logger.error(f"Missing required fields: {missing_fields}")
-            return jsonify({
-                'error': 'Missing required fields',
-                'missing_fields': missing_fields
-            }), 400
-
-        # Create entry
+        # Use DataManager to validate and sanitize data
         try:
-            entry = LogEntry(
-                title=data['title'],
-                content=data['content'],
-                project_name=data['project_name'],
-                developer_tag=current_user.developer_tag,
-                start_time=datetime.fromisoformat(data['start_time']),
-                end_time=datetime.fromisoformat(data['end_time']),
-                time_worked=int(data['time_worked']),
-                commit_sha=data.get('commit_sha')  # Only include commit_sha
-            )
-            
-            logger.info(f"Created entry object: {entry}")
-            db.session.add(entry)
-            db.session.commit()
-            logger.info("Successfully committed to database")
-            
-            return jsonify(entry.to_dict()), 201
-            
+            cleaned_data = DataManager.validate_entry_data(data)
         except ValueError as e:
-            logger.error(f"Data validation error: {str(e)}")
-            return jsonify({'error': f'Invalid data format: {str(e)}'}), 400
-            
+            logger.error(f"Validation error: {str(e)}")
+            return jsonify({'error': str(e)}), 400
+
+        # Create entry with cleaned data
+        entry = LogEntry(
+            title=cleaned_data['title'],
+            content=cleaned_data['content'],
+            project_name=cleaned_data['project_name'],
+            developer_tag=current_user.developer_tag,
+            start_time=cleaned_data['start_time'],
+            end_time=cleaned_data['end_time'],
+            time_worked=cleaned_data['time_worked'],
+            commit_sha=cleaned_data['commit_sha']
+        )
+
+        db.session.add(entry)
+        db.session.commit()
+        logger.info("Successfully created entry")
+
+        return jsonify(entry.to_dict()), 201
+
     except Exception as e:
         logger.error("Error creating entry", exc_info=True)
         db.session.rollback()
@@ -173,36 +159,27 @@ def get_entry(entry_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
-@api.route('/projects/<string:project_name>/commits', methods=['GET'])
+@api.route('/projects/<string:project_name>/commits')
 @login_required
 def get_project_commits(project_name):
-    logger.info(f"Fetching commits for project: {project_name}")
-    
     try:
-        # Get project from database
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+        
         project = Project.query.get_or_404(project_name)
-        logger.info(f"Found project: {project.name}")
-
-        # Initialize GoGitter
         gogitter = GoGitter()
+        commits = gogitter.get_commit_history(project.repository_url, page, per_page)
         
-        # Get commits from GitHub
-        commits = gogitter.get_commit_history(project.repository_url)
-        logger.info(f"Retrieved {len(commits)} commits")
+        commit_data = [{
+            'sha': commit.sha,
+            'message': commit.commit.message,
+            'author': commit.commit.author.name,
+            'date': commit.commit.author.date.isoformat()
+        } for commit in commits]
         
-        # Format commit data for frontend
-        formatted_commits = []
-        for commit in commits:
-            formatted_commits.append({
-                'sha': commit.sha,
-                'message': commit.commit.message,
-                'author': commit.commit.author.name,
-                'date': commit.commit.author.date.isoformat(),
-                'url': commit.html_url
-            })
-        
-        return jsonify(formatted_commits), 200
-        
+        return jsonify({
+            'commits': commit_data,
+            'has_more': len(commit_data) == per_page
+        })
     except Exception as e:
-        logger.error(f"Error fetching commits for project {project_name}: {str(e)}")
-        return jsonify({'error': f'Failed to fetch commits: {str(e)}'}), 500
+        return jsonify({'error': str(e)}), 500

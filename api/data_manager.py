@@ -1,8 +1,18 @@
 import re
 from datetime import datetime
 import bcrypt
+from .gogitter import GoGitter
+from models import LogEntry, User, Project, db
+import bleach
+from urllib.parse import urlparse
+import logging
+
+logger = logging.getLogger(__name__)
 
 class DataManager:
+    def __init__(self):
+        self.gogitter = GoGitter()
+
     @staticmethod
     def sanitize_repository_url(url):
         if not url:
@@ -27,8 +37,17 @@ class DataManager:
 
     @staticmethod
     def calculate_time_worked(start_time, end_time):
-        diff_minutes = (end_time - start_time).total_seconds() / 60
-        return round(diff_minutes / 15) * 15
+        """Calculate time worked in minutes"""
+        if not isinstance(start_time, datetime) or not isinstance(end_time, datetime):
+            raise ValueError("Invalid timestamp format")
+            
+        time_diff = end_time - start_time
+        minutes = time_diff.total_seconds() / 60
+        
+        if minutes < 0:
+            raise ValueError("End time cannot be before start time")
+            
+        return round(minutes)
 
     @staticmethod
     def sanitize_email(email):
@@ -96,3 +115,117 @@ class DataManager:
     @staticmethod
     def verify_password(password, hashed):
         return bcrypt.checkpw(DataManager.validate_password(password), hashed)
+
+    @staticmethod
+    def validate_entry_data(data):
+        """Validate entry data and return cleaned data or raise ValueError"""
+        required_fields = ['title', 'content', 'project_name', 'start_time', 'end_time', 'time_worked']
+        missing_fields = [field for field in required_fields if field not in data]
+        
+        if missing_fields:
+            raise ValueError(f"Missing required fields: {missing_fields}")
+            
+        # Sanitize text fields
+        cleaned_data = {
+            'title': DataManager.sanitize_text(data['title']),
+            'content': DataManager.sanitize_text(data['content']),
+            'project_name': DataManager.sanitize_text(data['project_name']),
+            'start_time': DataManager.validate_timestamp(data['start_time']),
+            'end_time': DataManager.validate_timestamp(data['end_time']),
+            'time_worked': DataManager.validate_time_worked(data['time_worked']),
+            'commit_sha': data.get('commit_sha')
+        }
+        
+        return cleaned_data
+
+    @staticmethod
+    def get_entry_stats(entry_id):
+        """Get all stats for an entry including reactions"""
+        entry = LogEntry.query.get_or_404(entry_id)
+        stats = {
+            'likes_count': entry.reactions.filter_by(reaction_type='like').count(),
+            'dislikes_count': entry.reactions.filter_by(reaction_type='dislike').count(),
+            'comments_count': entry.comments.count() if hasattr(entry, 'comments') else 0
+        }
+        return stats
+
+    @staticmethod
+    def sanitize_text(text):
+        """Sanitize text input to prevent XSS"""
+        if not text:
+            return ""
+        # Allow only basic HTML tags
+        allowed_tags = ['b', 'i', 'u', 'p', 'br', 'code']
+        return bleach.clean(str(text), tags=allowed_tags, strip=True)
+
+    @staticmethod
+    def validate_timestamp(timestamp_str):
+        """Validate and parse timestamp"""
+        try:
+            return datetime.fromisoformat(timestamp_str)
+        except (ValueError, TypeError):
+            raise ValueError(f"Invalid timestamp format: {timestamp_str}")
+
+    @staticmethod
+    def validate_time_worked(time_worked):
+        """Validate time worked value"""
+        try:
+            time = int(time_worked)
+            if time < 0:
+                raise ValueError
+            return time
+        except (ValueError, TypeError):
+            raise ValueError("Time worked must be a positive integer")
+
+    @staticmethod
+    def validate_repository_url(url):
+        """Validate GitHub repository URL"""
+        if not url:
+            raise ValueError("Repository URL is required")
+            
+        parsed = urlparse(url)
+        if not parsed.netloc or 'github.com' not in parsed.netloc:
+            raise ValueError("Invalid GitHub repository URL")
+            
+        path_parts = parsed.path.strip('/').split('/')
+        if len(path_parts) < 2:
+            raise ValueError("Invalid repository path")
+            
+        return url
+
+    def get_commit_info(self, project_name):
+        """Get commits for a project"""
+        try:
+            project = Project.query.get_or_404(project_name)
+            commits = self.gogitter.get_commit_history(project.repository_url)
+            
+            formatted_commits = []
+            for commit in commits:
+                formatted_commits.append({
+                    'sha': commit.sha,
+                    'message': self.sanitize_text(commit.commit.message),
+                    'author': self.sanitize_text(commit.commit.author.name),
+                    'date': commit.commit.author.date.isoformat(),
+                    'url': commit.html_url
+                })
+            return formatted_commits
+            
+        except Exception as e:
+            logger.error(f"Error fetching commits: {str(e)}")
+            raise
+
+    @staticmethod
+    def get_project_stats(project_name):
+        """Get all stats for a project"""
+        project = Project.query.get_or_404(project_name)
+        stats = {
+            'total_entries': LogEntry.query.filter_by(project_name=project_name).count(),
+            'total_time': db.session.query(db.func.sum(LogEntry.time_worked))
+                          .filter_by(project_name=project_name)
+                          .scalar() or 0,
+            'contributors': db.session.query(LogEntry.developer_tag)
+                            .filter_by(project_name=project_name)
+                            .distinct()
+                            .count()
+        }
+        return stats

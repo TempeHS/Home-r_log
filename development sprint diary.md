@@ -1,6 +1,6 @@
 # Agile Home(r) development diary
 
-## Agenda ( from brainstorming and discussion with primary client franky )
+## Agenda ( from brainstorming and discussion with primary client franky (and class survey))
 
 ## site page improvements
 - create more project oriented feed page, that shows you projects that you are in, recomended posts from either popular posts or posts from "friends"
@@ -12,7 +12,16 @@
 - friends / coworker lists
 - organisation groups
 - optional safeword cencoring
-- recomendation algorithm that reads post content and tags it == no ==
+- recomendation algorithm that reads post content and tags it == yes ==
 - public and private projects/groups
 - light and dark mode switch ability
-- karma system
+- karma system **lowest votes**
+
+recomendations
+user profile with portfolio system
+
+bagel for dislike donut for like.
+
+homer mode where likes are homer, and comment is homer (use ai to create homer icons)
+
+dynamic ascii homer animation
