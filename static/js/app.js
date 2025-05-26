@@ -1,4 +1,5 @@
 import { LogEntry } from './logEntry.js';
+import { ReactionManager } from './entryViewer.js';
 
 // core app functionality classes and utilities
 class EntryManager {
@@ -512,54 +513,7 @@ class ProfileManager {
     }
 }
 
-class ReactionManager {
-    constructor() {
-        this.bindReactionEvents();
-    }
-
-    bindReactionEvents() {
-        // Delegate event handling to the document for dynamically loaded content
-        document.addEventListener('click', (e) => {
-            if (e.target.matches('.reaction-btn')) {
-                this.handleReaction(e);
-            }
-        });
-    }
-
-    async handleReaction(e) {
-        e.preventDefault();
-        const button = e.target.closest('.reaction-btn');
-        const entryId = button.dataset.entryId;
-        const reactionType = button.dataset.reactionType;
-        const counterElement = button.querySelector('.reaction-count');
-
-        try {
-            const response = await fetch(`/api/entries/${entryId}/react`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ reaction_type: reactionType }),
-            });
-
-            if (!response.ok) throw new Error('Failed to update reaction');
-            
-            const data = await response.json();
-            // Update the reaction counts
-            const likesCount = button.closest('.reactions').querySelector('.likes-count');
-            const dislikesCount = button.closest('.reactions').querySelector('.dislikes-count');
-            
-            if (likesCount) likesCount.textContent = data.likes_count;
-            if (dislikesCount) dislikesCount.textContent = data.dislikes_count;
-
-            // Toggle active state
-            button.classList.toggle('active', data.user_reaction === reactionType);
-        } catch (error) {
-            console.error('Error updating reaction:', error);
-            alert('Failed to update reaction. Please try again.');
-        }
-    }
-}
+// Using the ReactionManager from entryViewer.js instead for consistency
 
 class CommentManager {
     constructor() {
@@ -681,7 +635,7 @@ class CommentManager {
 // Initialize managers only if not already initialized by EntryViewer
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.entryViewer) {
-        new ReactionManager();
+        window.reactionManager = new ReactionManager();
     }
 });
 

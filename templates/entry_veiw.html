@@ -36,13 +36,13 @@
             
             <!-- Reactions Section -->
             <div class="reactions d-flex align-items-center gap-3 mb-4">
-                <button class="btn btn-outline-primary reaction-btn" data-entry-id="{{ entry.id }}" data-reaction-type="like">
-                    <i class="bi bi-hand-thumbs-up"></i>
-                    <span class="reaction-count likes-count">{{ entry.likes_count }}</span>
+                <button class="reaction-btn" data-entry-id="{{ entry.id }}" data-reaction-type="like">
+                    <img src="{{ url_for('static', filename='images/like.svg') }}" alt="Like" width="24" height="24">
+                    <span class="likes-count">{{ entry.likes_count or 0 }}</span>
                 </button>
-                <button class="btn btn-outline-danger reaction-btn" data-entry-id="{{ entry.id }}" data-reaction-type="dislike">
-                    <i class="bi bi-hand-thumbs-down"></i>
-                    <span class="reaction-count dislikes-count">{{ entry.dislikes_count }}</span>
+                <button class="reaction-btn" data-entry-id="{{ entry.id }}" data-reaction-type="dislike">
+                    <img src="{{ url_for('static', filename='images/dislike.svg') }}" alt="Dislike" width="24" height="24">
+                    <span class="dislikes-count">{{ entry.dislikes_count or 0 }}</span>
                 </button>
             </div>
 

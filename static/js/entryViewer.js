@@ -1,3 +1,8 @@
+// Import utilities
+const showNotification = window.showNotification || function(message, type) {
+    console.error('showNotification not available:', message);
+};
+
 // Utility function for escaping HTML
 function escapeHtml(unsafe) {
     if (typeof unsafe !== 'string') {
@@ -166,104 +171,223 @@ export class EntryViewer {
     }
 }
 
-class ReactionManager {
+export class ReactionManager {
     constructor() {
+        // Configuration
+        this.DEBOUNCE_TIME = 2000;
+        
+        // State management
+        this.entryStates = new Map();
+        this.syncTimeouts = new Map();
+        this.pendingSync = new Map();
+        
+        // Image paths for particles
+        this.likeImage = '/static/images/like.svg';
+        this.dislikeImage = '/static/images/dislike.svg';
+        
         this.bindEvents();
     }
 
     bindEvents() {
         document.addEventListener('click', (e) => {
-            // Check if the click target is inside a reaction button or its children
             const reactionBtn = e.target.closest('.reaction-btn');
             if (reactionBtn && !reactionBtn.disabled) {
-                e.stopPropagation(); // Prevent event bubbling
                 e.preventDefault();
+                e.stopPropagation();
                 this.handleReaction(reactionBtn);
             }
         });
     }
 
-    async handleReaction(button) {
-        try {
-            const entryId = button.dataset.entryId;
-            const reactionType = button.dataset.reactionType;
-            const reactionsContainer = button.closest('.reactions');
-            const isActive = button.classList.contains('active');
-            const otherType = reactionType === 'like' ? 'dislike' : 'like';
-            const otherButton = reactionsContainer.querySelector(`[data-reaction-type="${otherType}"]`);
-            const otherWasActive = otherButton.classList.contains('active');
-            
-            // get current tally
-            const likesCount = reactionsContainer.querySelector('.likes-count');
-            const dislikesCount = reactionsContainer.querySelector('.dislikes-count');
-            let likes = parseInt(likesCount.textContent);
-            let dislikes = parseInt(dislikesCount.textContent);
+    createParticle(button, type) {
+        const particle = document.createElement('img');
+        particle.src = type === 'like' ? this.likeImage : this.dislikeImage;
+        particle.classList.add('reaction-particle');
+        
+        // Get button position
+        const rect = button.getBoundingClientRect();
+        const startX = rect.left + rect.width/2 - 12;
+        const startY = rect.top + rect.height/2 - 12;
+        
+        particle.style.cssText = `
+            width: 24px;
+            height: 24px;
+            left: ${startX}px;
+            top: ${startY}px;
+            opacity: 1;
+        `;
+        
+        document.body.appendChild(particle);
 
-            // clear active
-            reactionsContainer.querySelectorAll('.reaction-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
+        // Animation parameters
+        const angle = (Math.random() * 60 - 30) * Math.PI / 180;
+        const velocity = 2 + Math.random() * 2;
+        const rotationSpeed = (Math.random() - 0.5) * 8;
+        let rotation = 0;
+        let opacity = 1;
+        let y = startY;
+        let x = startX;
 
-            // brute force calculation
-            if (reactionType === 'like') {
-                if (isActive) {
-                    // Removing like
-                    likes--;
-                } else {
-                    // Adding like
-                    likes++;
-                    if (otherWasActive) {
-                        // Was disliked before, remove dislike
-                        dislikes--;
-                    }
-                    button.classList.add('active');
-                }
-            } else {  // dislike
-                if (isActive) {
-                    // Removing dislike
-                    dislikes--;
-                } else {
-                    // Adding dislike
-                    dislikes++;
-                    if (otherWasActive) {
-                        // Was liked before, remove like
-                        likes--;
-                    }
-                    button.classList.add('active');
-                }
+        const animate = () => {
+            x += Math.sin((startY - y) / 30) * 1.5;
+            y -= velocity;
+            rotation += rotationSpeed;
+            opacity = Math.max(0, opacity - 0.02);
+
+            particle.style.transform = `translate(${x - startX}px, ${y - startY}px) rotate(${rotation}deg)`;
+            particle.style.opacity = opacity;
+
+            if (opacity > 0) {
+                requestAnimationFrame(animate);
+            } else {
+                particle.remove();
             }
+        };
 
-            // Update the UI with new counts
-            likesCount.textContent = likes;
-            dislikesCount.textContent = dislikes;
+        requestAnimationFrame(animate);
+    }
 
-            // Send update to server
+    getEntryState(entryId, container) {
+        if (!this.entryStates.has(entryId)) {
+            // Initialize state if it doesn't exist
+            this.entryStates.set(entryId, {
+                likes: parseInt(container.querySelector('.likes-count').textContent) || 0,
+                dislikes: parseInt(container.querySelector('.dislikes-count').textContent) || 0,
+                currentReaction: container.querySelector('.reaction-btn.active')?.dataset.reactionType || null
+            });
+        }
+        return this.entryStates.get(entryId);
+    }
+
+    updateEntryState(entryId, newState) {
+        this.entryStates.set(entryId, newState);
+        return newState;
+    }
+
+    calculateNewState(currentState, clickedType) {
+        const state = { ...currentState };
+
+        // If clicking the same reaction, remove it
+        if (state.currentReaction === clickedType) {
+            if (clickedType === 'like') state.likes--;
+            if (clickedType === 'dislike') state.dislikes--;
+            state.currentReaction = null;
+        }
+        // If switching reactions
+        else if (state.currentReaction) {
+            if (state.currentReaction === 'like') {
+                state.likes--;
+                state.dislikes++;
+            } else {
+                state.dislikes--;
+                state.likes++;
+            }
+            state.currentReaction = clickedType;
+        }
+        // If adding new reaction
+        else {
+            if (clickedType === 'like') state.likes++;
+            if (clickedType === 'dislike') state.dislikes++;
+            state.currentReaction = clickedType;
+        }
+
+        return state;
+    }
+
+    updateUI(container, state) {
+        // Update counts
+        container.querySelector('.likes-count').textContent = Math.max(0, state.likes);
+        container.querySelector('.dislikes-count').textContent = Math.max(0, state.dislikes);
+
+        // Update active states
+        container.querySelectorAll('.reaction-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.reactionType === state.currentReaction);
+        });
+    }
+
+    async handleReaction(button) {
+        const container = button.closest('.reactions');
+        const entryId = button.dataset.entryId;
+        const type = button.dataset.reactionType;
+        
+        if (!container || !entryId || !type) {
+            console.error('Missing required data attributes');
+            return;
+        }
+
+        // Get current state
+        const currentState = this.getEntryState(entryId, container);
+        
+        // Calculate new state
+        const newState = this.calculateNewState(currentState, type);
+        
+        // Update UI immediately
+        this.updateUI(container, newState);
+        
+        // Create particle effect
+        this.createParticle(button, type);
+        
+        // Store new state
+        this.updateEntryState(entryId, newState);
+        
+        // Schedule sync with server
+        this.scheduleSync(entryId, container);
+    }
+
+    scheduleSync(entryId, container) {
+        // Clear existing timeout if any
+        if (this.syncTimeouts.has(entryId)) {
+            clearTimeout(this.syncTimeouts.get(entryId));
+        }
+
+        // Schedule new sync
+        this.syncTimeouts.set(entryId, setTimeout(() => {
+            this.syncWithServer(entryId, container);
+        }, this.DEBOUNCE_TIME));
+    }
+
+    async syncWithServer(entryId, container) {
+        const state = this.entryStates.get(entryId);
+        if (!state) return;
+
+        try {
             const response = await fetch(`/api/entries/${entryId}/react`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                 },
-                body: JSON.stringify({ reaction_type: reactionType }),
+                body: JSON.stringify({
+                    reaction_type: state.currentReaction // null will remove the reaction
+                })
             });
 
             const data = await response.json();
-            console.log('Reaction response:', data);
 
             if (!response.ok) {
-                // If server update fails, revert the UI changes
-                likesCount.textContent = data.likes_count;
-                dislikesCount.textContent = data.dislikes_count;
-                reactionsContainer.querySelectorAll('.reaction-btn').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                if (data.user_reaction) {
-                    const activeButton = reactionsContainer.querySelector(`[data-reaction-type="${data.user_reaction}"]`);
-                    if (activeButton) activeButton.classList.add('active');
-                }
-                throw new Error(data.error || 'Failed to update reaction');
+                throw new Error(data.error || 'Failed to sync reaction');
             }
+
+            // Update state with server response
+            const serverState = {
+                likes: data.likes_count,
+                dislikes: data.dislikes_count,
+                currentReaction: data.user_reaction
+            };
+
+            // Only update UI if server state differs from our current state
+            if (JSON.stringify(serverState) !== JSON.stringify(state)) {
+                this.updateEntryState(entryId, serverState);
+                this.updateUI(container, serverState);
+            }
+
         } catch (error) {
-            console.error('Error handling reaction:', error);
+            console.error('Error syncing with server:', error);
+            showNotification('Failed to save your reaction. Changes will be temporary.', 'warning');
+        } finally {
+            // Cleanup
+            this.syncTimeouts.delete(entryId);
+            this.pendingSync.delete(entryId);
         }
     }
 }

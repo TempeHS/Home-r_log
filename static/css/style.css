@@ -586,6 +586,48 @@ small,
     border-color: var(--bs-danger);
 }
 
+/* Reaction buttons */
+.reaction-btn {
+    transition: all 0.2s ease;
+    border: none;
+    background: transparent;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px;
+}
+
+.reaction-btn[data-reaction-type="like"] {
+    color: #ff6b00;
+}
+
+.reaction-btn[data-reaction-type="like"]:hover,
+.reaction-btn[data-reaction-type="like"].active {
+    background-color: rgba(255, 107, 0, 0.1);
+}
+
+.reaction-btn[data-reaction-type="dislike"] {
+    color: #2ecc71;
+}
+
+.reaction-btn[data-reaction-type="dislike"]:hover,
+.reaction-btn[data-reaction-type="dislike"].active {
+    background-color: rgba(46, 204, 113, 0.1);
+}
+
+.reaction-btn:active {
+    transform: scale(0.95);
+}
+
+/* Particle animation */
+.reaction-particle {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    transition: opacity 0.5s ease;
+}
+
 .comments-section {
     border-top: 1px solid var(--border);
     padding-top: 2rem;
