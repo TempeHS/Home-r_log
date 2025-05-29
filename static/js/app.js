@@ -649,23 +649,20 @@ function escapeHtml(unsafe) { // prevents xss in dynamic stuff
         .replace(/'/g, "&#039;");
 }
 
-function showNotification(message, type) {
-    // create alert div
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
-    alert.role = 'alert';
-    alert.innerHTML = `
+window.showNotification = function(message, type = 'info') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
+    alertDiv.style.zIndex = '1050';
+    alertDiv.innerHTML = `
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     `;
-
-    // insert at top of page
-    const container = document.querySelector('.container');
-    container.insertBefore(alert, container.firstChild);
-
-    // auto remove after 5 seconds
-    setTimeout(() => alert.remove(), 5000);
-}
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+};
 
 function clipContent(content, maxLines = 3) {
     const lines = content.split('\n');

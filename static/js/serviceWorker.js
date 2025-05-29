@@ -6,15 +6,7 @@ const URLS_TO_CACHE = [
     '/',
     '/static/css/style.css',
     '/static/js/app.js',
-    '/static/js/auth.js',
-    '/static/js/logEntry.js',
-    '/privacy',
-    '/login',
-    '/search',
-    //'/logout',
-    //etc..
-    '/static/css/bootstrap.min.css',
-    '/static/js/bootstrap.bundle.min.js',
+    '/static/js/entryViewer.js',
     '/static/manifest.json'
 ];
 
@@ -22,7 +14,22 @@ const URLS_TO_CACHE = [
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then(cache => cache.addAll(URLS_TO_CACHE))
+            .then(cache => {
+                return Promise.all(
+                    URLS_TO_CACHE.map(url => {
+                        return fetch(url)
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error(`Failed to fetch ${url}`);
+                                }
+                                return cache.put(url, response);
+                            })
+                            .catch(error => {
+                                console.warn(`Failed to cache ${url}:`, error);
+                            });
+                    })
+                );
+            })
     );
 });
 

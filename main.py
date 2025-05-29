@@ -13,9 +13,9 @@ from flask_mail import Mail
 from flask_migrate import Migrate
 from api.gogitter import GoGitter 
 from datetime import datetime
-from flask_session import Session  # Add this import
+from flask_session import Session 
 from werkzeug.middleware.proxy_fix import ProxyFix
-from werkzeug.exceptions import HTTPException  # Add this import
+from werkzeug.exceptions import HTTPException  
 import tempfile
 from datetime import timedelta
 

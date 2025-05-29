@@ -173,19 +173,11 @@ export class EntryViewer {
 
 export class ReactionManager {
     constructor() {
-        // Configuration
-        this.DEBOUNCE_TIME = 2000;
-        
-        // State management
+        this.DEBOUNCE_TIME = 1000;
         this.entryStates = new Map();
-        this.syncTimeouts = new Map();
-        this.pendingSync = new Map();
-        
-        // Image paths for particles
+        this.bindEvents();
         this.likeImage = '/static/images/like.svg';
         this.dislikeImage = '/static/images/dislike.svg';
-        
-        this.bindEvents();
     }
 
     bindEvents() {
@@ -193,10 +185,55 @@ export class ReactionManager {
             const reactionBtn = e.target.closest('.reaction-btn');
             if (reactionBtn && !reactionBtn.disabled) {
                 e.preventDefault();
-                e.stopPropagation();
                 this.handleReaction(reactionBtn);
             }
         });
+    }
+
+    async handleReaction(button) {
+        const entryId = button.dataset.entryId;
+        const type = button.dataset.reactionType;
+        const container = button.closest('.reactions');
+
+        if (!entryId || !type || !container) return;
+
+        // Disable button temporarily
+        button.disabled = true;
+
+        try {
+            const response = await fetch(`/api/entries/${entryId}/react`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content
+                },
+                body: JSON.stringify({ reaction_type: type })
+            });
+
+            if (!response.ok) throw new Error('Failed to update reaction');
+
+            const data = await response.json();
+            
+            // Update UI with server response
+            container.querySelector('.likes-count').textContent = data.likes_count;
+            container.querySelector('.dislikes-count').textContent = data.dislikes_count;
+            
+            // Update active states
+            container.querySelectorAll('.reaction-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.reactionType === data.user_reaction);
+            });
+
+            // Create particle effect
+            this.createParticle(button, type);
+
+        } catch (error) {
+            console.error('Error updating reaction:', error);
+            if (window.showNotification) {
+                window.showNotification('Failed to save reaction', 'error');
+            }
+        } finally {
+            button.disabled = false;
+        }
     }
 
     createParticle(button, type) {
@@ -303,47 +340,6 @@ export class ReactionManager {
         container.querySelectorAll('.reaction-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.reactionType === state.currentReaction);
         });
-    }
-
-    async handleReaction(button) {
-        const container = button.closest('.reactions');
-        const entryId = button.dataset.entryId;
-        const type = button.dataset.reactionType;
-        
-        if (!container || !entryId || !type) {
-            console.error('Missing required data attributes');
-            return;
-        }
-
-        // Get current state
-        const currentState = this.getEntryState(entryId, container);
-        
-        // Calculate new state
-        const newState = this.calculateNewState(currentState, type);
-        
-        // Update UI immediately
-        this.updateUI(container, newState);
-        
-        // Create particle effect
-        this.createParticle(button, type);
-        
-        // Store new state
-        this.updateEntryState(entryId, newState);
-        
-        // Schedule sync with server
-        this.scheduleSync(entryId, container);
-    }
-
-    scheduleSync(entryId, container) {
-        // Clear existing timeout if any
-        if (this.syncTimeouts.has(entryId)) {
-            clearTimeout(this.syncTimeouts.get(entryId));
-        }
-
-        // Schedule new sync
-        this.syncTimeouts.set(entryId, setTimeout(() => {
-            this.syncWithServer(entryId, container);
-        }, this.DEBOUNCE_TIME));
     }
 
     async syncWithServer(entryId, container) {
