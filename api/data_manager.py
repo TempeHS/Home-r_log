@@ -1,18 +1,8 @@
 import re
 from datetime import datetime
 import bcrypt
-from .gogitter import GoGitter
-from models import LogEntry, User, Project, db
-import bleach
-from urllib.parse import urlparse
-import logging
-
-logger = logging.getLogger(__name__)
 
 class DataManager:
-    def __init__(self):
-        self.gogitter = GoGitter()
-
     @staticmethod
     def sanitize_repository_url(url):
         if not url:

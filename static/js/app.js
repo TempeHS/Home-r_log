@@ -467,6 +467,33 @@ class ProfileManager {
         });
     }
 
+    async handleGenerateKey() {
+        try {
+            const response = await fetch('/api/user/generate-key', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            });
+            
+            if (response.ok) {
+                this.showNotification('API key generated successfully', 'success');
+                location.reload();
+            } else {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to generate API key');
+            }
+        } catch (error) {
+            this.logError(error, 'API Key Generation');
+        }
+    }
+
+    async handleRegenerateKey() {
+        if (confirm('Are you sure? Current API key will be invalidated.')) {
+            await this.handleGenerateKey();
+        }
+    }
+
     async loadProfileData() {
         try {
             const response = await fetch('/api/entries/user-stats');

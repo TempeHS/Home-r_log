@@ -6,7 +6,13 @@ const URLS_TO_CACHE = [
     '/',
     '/static/css/style.css',
     '/static/js/app.js',
-    '/static/js/entryViewer.js',
+    '/static/js/auth.js',
+    '/static/js/logEntry.js',
+    '/privacy',
+    '/login',
+    '/search',
+    '/static/css/bootstrap.min.css',
+    '/static/js/bootstrap.bundle.min.js',
     '/static/manifest.json'
 ];
 
