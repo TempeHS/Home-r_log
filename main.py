@@ -223,13 +223,15 @@ def new_project():
             
             logger.info(f"Attempting to create project with name: {name}, repo: {repository_url}")
             
-            # Basic validation first
+            # Basic validation
             if not all([name, description, repository_url]):
                 raise ValueError("All fields are required")
             
             # Validate repository URL
-            repository_url = DataManager.sanitize_repository_url(repository_url)
+            if not repository_url.startswith('https://github.com/'):
+                raise ValueError("Invalid GitHub repository URL")
             
+            # Create project
             project = Project(
                 name=name,
                 description=description,
@@ -242,6 +244,10 @@ def new_project():
                 users = User.query.filter(User.developer_tag.in_(team_members)).all()
                 project.team_members.extend(users)
                 logger.info(f"Added {len(users)} team members to project")
+            
+            # Always add creator as team member
+            if current_user not in project.team_members:
+                project.team_members.append(current_user)
             
             db.session.add(project)
             db.session.commit()
@@ -313,7 +319,7 @@ def format_date(value, format='%Y-%m-%d %H:%M'):
         return ''
     if isinstance(value, str):
         try:
-            value = datetime.fromisoformat(value.replace('Z', '+00:00'))
+            value = datetime.fromisoformat(value)
         except ValueError:
             return value
     if isinstance(value, datetime):

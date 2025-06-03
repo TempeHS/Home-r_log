@@ -187,16 +187,20 @@ def get_project_commits(project_name):
         # Format commit data for frontend
         formatted_commits = []
         for commit in commits:
-            formatted_commits.append({
-                'sha': commit.sha,
-                'message': commit.commit.message,
-                'author': commit.commit.author.name,
-                'date': commit.commit.author.date.isoformat(),
-                'url': commit.html_url
-            })
+            try:
+                formatted_commits.append({
+                    'sha': commit.sha,
+                    'message': commit.commit.message,
+                    'author': commit.commit.author.name,
+                    'date': commit.commit.author.date.isoformat(),
+                    'url': commit.html_url
+                })
+            except AttributeError as e:
+                logger.warning(f"Error formatting commit {commit.sha}: {str(e)}")
+                continue
         
         return jsonify(formatted_commits), 200
         
     except Exception as e:
-        logger.error(f"Error fetching commits for project {project_name}: {str(e)}")
+        logger.error(f"Error fetching commits for project {project_name}: {str(e)}", exc_info=True)
         return jsonify({'error': f'Failed to fetch commits: {str(e)}'}), 500

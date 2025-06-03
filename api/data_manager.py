@@ -1,6 +1,11 @@
-import re
 from datetime import datetime
+import re
+from urllib.parse import urlparse
 import bcrypt
+import bleach
+import logging
+
+logger = logging.getLogger(__name__)
 
 class DataManager:
     @staticmethod
@@ -20,10 +25,10 @@ class DataManager:
             start = datetime.fromisoformat(start_time)
             end = datetime.fromisoformat(end_time)
             if end <= start:
-                raise ValueError("end time must be after start time")
+                raise ValueError("End time must be after start time")
             return start, end
         except ValueError as e:
-            raise ValueError(f"invalid timestamp format: {str(e)}")
+            raise ValueError(f"Invalid timestamp format: {str(e)}")
 
     @staticmethod
     def calculate_time_worked(start_time, end_time):
@@ -113,7 +118,7 @@ class DataManager:
         missing_fields = [field for field in required_fields if field not in data]
         
         if missing_fields:
-            raise ValueError(f"Missing required fields: {missing_fields}")
+            raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
             
         # Sanitize text fields
         cleaned_data = {
@@ -143,7 +148,7 @@ class DataManager:
     def sanitize_text(text):
         """Sanitize text input to prevent XSS"""
         if not text:
-            return ""
+            raise ValueError("Text cannot be empty")
         # Allow only basic HTML tags
         allowed_tags = ['b', 'i', 'u', 'p', 'br', 'code']
         return bleach.clean(str(text), tags=allowed_tags, strip=True)
@@ -154,18 +159,18 @@ class DataManager:
         try:
             return datetime.fromisoformat(timestamp_str)
         except (ValueError, TypeError):
-            raise ValueError(f"Invalid timestamp format: {timestamp_str}")
+            raise ValueError("Invalid timestamp format")
 
     @staticmethod
     def validate_time_worked(time_worked):
         """Validate time worked value"""
         try:
-            time = int(time_worked)
-            if time < 0:
-                raise ValueError
-            return time
+            minutes = int(time_worked)
+            if minutes <= 0:
+                raise ValueError("Time worked must be positive")
+            return minutes
         except (ValueError, TypeError):
-            raise ValueError("Time worked must be a positive integer")
+            raise ValueError("Invalid time worked value")
 
     @staticmethod
     def validate_repository_url(url):
