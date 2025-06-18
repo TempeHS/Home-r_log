@@ -112,6 +112,7 @@ export class LogEntry {
             }
 
             // Redirect to project page on success
+            window.LoadingAnimation?.showLoading();
             window.location.href = `/projects/${entry.project_name}`;
         } catch (error) {
             console.error('Error:', error);

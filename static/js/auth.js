@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         document.getElementById('loginForm').style.display = 'none';
                         document.getElementById('twoFactorForm').style.display = 'block';
                     } else {
+                        window.LoadingAnimation?.showLoading();
                         window.location.href = data.redirect || '/';
                     }
                 } else {
@@ -58,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     const data = await response.json();
                     if (response.ok) {
+                        window.LoadingAnimation?.showLoading();
                         window.location.href = data.redirect;
                     } else {
                         throw new Error(data.error);
@@ -119,6 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('Response data:', data);
                 
                 if (response.ok) {
+                    window.LoadingAnimation?.showLoading();
                     window.location.href = data.redirect;
                 } else {
                     throw new Error(data.error);
@@ -145,6 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const data = await response.json();
                 if (response.ok) {
+                    window.LoadingAnimation?.showLoading();
                     window.location.href = data.redirect;
                 }
             } catch (error) {

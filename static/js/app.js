@@ -1,6 +1,323 @@
 import { LogEntry } from './logEntry.js';
 import { ReactionManager } from './entryViewer.js';
 
+// Loading Animation Class
+class LoadingAnimation {
+    constructor() {
+        this.loadingOverlay = null;
+        this.isActive = false;
+        this.createLoadingOverlay();
+        this.bindNavigationEvents();
+        
+        // Don't show loading immediately if initial overlay exists
+        const initialOverlay = document.getElementById('initialLoadingOverlay');
+        if (!initialOverlay && document.readyState === 'loading') {
+            this.show();
+        }
+    }
+
+    createLoadingOverlay() {
+        // Check if initial loading overlay exists and use it
+        this.loadingOverlay = document.getElementById('initialLoadingOverlay');
+        
+        if (this.loadingOverlay) {
+            // Use existing initial overlay
+            return;
+        }
+
+        // Create the loading overlay if it doesn't exist
+        this.loadingOverlay = document.createElement('div');
+        this.loadingOverlay.className = 'loading-overlay';
+        this.loadingOverlay.id = 'loadingOverlay';
+
+        // Create the sprinkles container
+        const sprinklesContainer = document.createElement('div');
+        sprinklesContainer.className = 'sprinkles-container';
+
+        // Create sprinkles
+        for (let i = 1; i <= 15; i++) {
+            const sprinkle = document.createElement('div');
+            sprinkle.className = 'sprinkle';
+            sprinklesContainer.appendChild(sprinkle);
+        }
+
+        // Create the main loading content
+        const loadingContent = document.createElement('div');
+        loadingContent.className = 'loading-content';
+
+        // Create donut container
+        const donutContainer = document.createElement('div');
+        donutContainer.className = 'donut-container';
+
+        // Create the SVG element using the like.svg content
+        const donutSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        donutSvg.setAttribute('class', 'donut-svg');
+        donutSvg.setAttribute('viewBox', '0 0 196.17 140.96');
+        donutSvg.innerHTML = `
+            <defs>
+                <style>
+                    .cls-1 { fill: #eb8f23; }
+                    .cls-2 { fill: #f68c1f; }
+                    .cls-3 { fill: #e17ab1; }
+                    .cls-4 { fill: #c2b59b; }
+                </style>
+            </defs>
+            <g>
+                <g>
+                    <path class="cls-2" d="M82.55.18c43.95-1.84,117.31,9.7,113.48,68.78C189.14,175.12-26.62,159.32,2.74,51.57,12.76,14.81,47.76,1.64,82.55.18ZM51.56,11.41c-13.31,4.47-23.68,9.17-32.83,20.38-9.31,11.41-24.23,44.26,2.9,41.67,7-.67,15.3-8.33,22.61-4.74,8.92,4.38,8.78,25.45,21.27,33.41,18.93,12.06,26.73-13.34,41.02-16.29,19.79-4.09,19.87,19.59,34.28,24.47,7.11,2.41,28.26,1.87,33.78-3.12,5.15-4.66,12.52-20.68,14.19-27.56C206.39,7.06,98.08-4.23,51.56,11.41ZM102.93,92.65c-5.96,3.99-10.78,12.24-18.51,15.76-13.63,6.21-27.04-2.64-33.18-14.87-1.88-3.74-5.8-18.14-8.22-19.61-4.9-2.98-12.28,2.71-16.91,3.98-7.17,1.97-13.5,1.51-19.86-2.48,6.27,51.17,60.53,62.21,103.88,59.68,19.21-1.12,38.78-6.68,54.12-18.44-13.07,1.1-26.18,1.4-35.8-8.92-6.86-7.35-11.98-24.17-25.52-15.11Z"/>
+                    <path class="cls-3" d="M51.56,11.41c46.52-15.64,154.82-4.35,137.23,68.21-1.67,6.88-9.04,22.9-14.19,27.56-5.52,4.99-26.67,5.52-33.78,3.12-14.41-4.88-14.49-28.56-34.28-24.47-14.29,2.95-22.09,28.35-41.02,16.29-12.49-7.95-12.35-29.02-21.27-33.41-7.31-3.59-15.62,4.07-22.61,4.74-27.13,2.59-12.21-30.26-2.9-41.67,9.14-11.21,19.52-15.9,32.83-20.38ZM87.48,34.94c-9.96,1.37-23.22,10.15-23.06,21.13.34,22.96,32.15,21.66,47.69,16.43,23.16-7.79,10.14-31.16-7.49-36.32-5.64-1.65-11.26-2.04-17.14-1.23ZM168.79,42.69c-3.74,1.11,1.2,6.07,1.91,7.9,3.12,7.93,3.74,16.41.68,24.54-1.24,3.28-6.73,9.31-6.1,11.65.98,3.62,4.42.62,5.9-.91,4.33-4.49,7.95-15.7,8.05-21.86.07-4.71-3.86-23.26-10.44-21.31Z"/>
+                    <path class="cls-4" d="M102.93,92.65c13.53-9.06,18.66,7.77,25.52,15.11,9.62,10.31,22.72,10.01,35.8,8.92-15.34,11.76-34.91,17.32-54.12,18.44-43.35,2.53-97.61-8.51-103.88-59.68,6.36,3.99,12.69,4.46,19.86,2.48,4.63-1.27,12.01-6.96,16.91-3.98,2.42,1.47,6.34,15.86,8.22,19.61,6.14,12.23,19.55,21.07,33.18,14.87,7.73-3.52,12.56-11.77,18.51-15.76ZM43.75,109.45c-5.95-1.17-12.5-4.37-15.22-10.1-.77-1.62-2.37-12.17-5.92-7.05s5.03,15.08,8.97,17.92c2.75,1.98,10.96,6.38,12.96,2.01l-.79-2.78Z"/>
+                    <path class="cls-1" d="M87.48,34.94c5.87-.81,11.49-.42,17.14,1.23,17.63,5.16,30.65,28.53,7.49,36.32-15.54,5.23-47.34,6.53-47.69-16.43-.16-10.97,13.1-19.76,23.06-21.13ZM69.84,59.53c12.51-9.57,27.19-11.31,41.26-4.01,2.02,1.05,4.67,4.13,6.39,4.57,4.09,1.04.23-7.58-.75-9.22-4.24-7.09-15.59-11.33-23.56-11.31-6.95.02-20.38,5.02-22.57,12.26-.82,2.71-1.07,4.88-.78,7.7ZM86.47,56.79c-2.65.45-12.07,4.8-12.62,7.3,4.01,6.38,13.55,6.77,20.33,6.37,2.96-.18,20.32-2.63,20.36-5.45-6.84-7.75-18.14-9.89-28.07-8.21Z"/>
+                    <path class="cls-1" d="M168.79,42.69c6.59-1.95,10.51,16.6,10.44,21.31-.1,6.16-3.71,17.37-8.05,21.86-1.48,1.53-4.92,4.53-5.9.91-.63-2.34,4.86-8.36,6.1-11.65,3.06-8.13,2.44-16.6-.68-24.54-.72-1.82-5.65-6.79-1.91-7.9Z"/>
+                    <path class="cls-1" d="M43.75,109.45l.79,2.78c-2,4.37-10.21-.03-12.96-2.01-3.94-2.83-12.34-13.06-8.97-17.92,3.55-5.12,5.15,5.42,5.92,7.05,2.72,5.73,9.27,8.93,15.22,10.1Z"/>
+                    <path class="cls-4" d="M69.84,59.53c-.29-2.82-.04-4.99.78-7.7,2.18-7.24,15.62-12.24,22.57-12.26,7.97-.02,19.32,4.22,23.56,11.31.98,1.64,4.84,10.26.75,9.22-1.72-.44-4.37-3.52-6.39-4.57-14.07-7.31-28.75-5.56-41.26,4.01Z"/>
+                </g>
+            </g>
+        `;
+
+        donutContainer.appendChild(donutSvg);
+
+        // Create loading text
+        const loadingText = document.createElement('div');
+        loadingText.className = 'loading-text';
+        loadingText.textContent = 'loading()...';
+
+        // Assemble the loading content
+        loadingContent.appendChild(donutContainer);
+        loadingContent.appendChild(loadingText);
+
+        // Assemble the overlay
+        this.loadingOverlay.appendChild(sprinklesContainer);
+        this.loadingOverlay.appendChild(loadingContent);
+
+        // Add to body
+        document.body.appendChild(this.loadingOverlay);
+    }
+
+    bindNavigationEvents() {
+        // Intercept all navigation clicks
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a[href]');
+            if (link && this.shouldShowLoading(link)) {
+                const href = link.getAttribute('href');
+                
+                // Don't show loading for external links, anchors, or API calls
+                if (href.startsWith('http') || href.startsWith('#') || href.startsWith('javascript:') || href.includes('/api/')) {
+                    return;
+                }
+
+                // Show loading animation
+                this.show();
+            }
+        });
+
+        // Also handle form submissions that redirect
+        document.addEventListener('submit', (e) => {
+            const form = e.target;
+            if (form.tagName === 'FORM') {
+                const action = form.getAttribute('action');
+                const method = form.getAttribute('method') || 'get';
+                
+                // Only show loading for forms that will navigate to a new page
+                if (!action || (!action.includes('/api/') && method.toLowerCase() !== 'post')) {
+                    this.show();
+                }
+            }
+        });
+
+        // Hide loading when page is fully loaded
+        window.addEventListener('load', () => {
+            this.hide();
+        });
+
+        // Also hide loading on DOMContentLoaded as backup
+        document.addEventListener('DOMContentLoaded', () => {
+            this.hide();
+        });
+
+        // Hide loading on back/forward navigation
+        window.addEventListener('popstate', () => {
+            this.hide();
+        });
+
+        // Show loading when page starts unloading (navigation away)
+        window.addEventListener('beforeunload', () => {
+            // Only show if it's a navigation, not a refresh
+            if (performance.navigation.type === 1) { // reload
+                return;
+            }
+            this.show();
+        });
+
+        // Show loading when user navigates with browser buttons
+        window.addEventListener('pagehide', () => {
+            this.show();
+        });
+    }
+
+    shouldShowLoading(link) {
+        const href = link.getAttribute('href');
+        
+        // Don't show loading for:
+        // - External links
+        // - Anchor links
+        // - JavaScript links
+        // - API endpoints
+        // - Downloads
+        // - Links with target="_blank"
+        if (!href || 
+            href.startsWith('http') || 
+            href.startsWith('#') || 
+            href.startsWith('javascript:') || 
+            href.includes('/api/') ||
+            href.includes('download') ||
+            link.getAttribute('target') === '_blank') {
+            return false;
+        }
+
+        return true;
+    }
+
+    show() {
+        if (this.isActive) return;
+        
+        this.isActive = true;
+        this.loadingOverlay.classList.add('active');
+        
+        // Disable scrolling
+        document.body.style.overflow = 'hidden';
+    }
+
+    hide() {
+        if (!this.isActive) return;
+        
+        this.isActive = false;
+        this.loadingOverlay.classList.remove('active');
+        
+        // Re-enable scrolling
+        document.body.style.overflow = '';
+    }
+
+    // Static methods for external use
+    static showLoading() {
+        const loading = window.loadingAnimation;
+        if (loading) {
+            loading.show();
+        }
+    }
+
+    static hideLoading() {
+        const loading = window.loadingAnimation;
+        if (loading) {
+            loading.hide();
+        }
+    }
+
+    // Create a smaller loading component for specific areas
+    static createInlineLoader(container, text = 'loading()...') {
+        const loaderDiv = document.createElement('div');
+        loaderDiv.setAttribute('class', 'loading-content');
+        loaderDiv.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+        `;
+
+        // Create smaller donut
+        const donutContainer = document.createElement('div');
+        donutContainer.setAttribute('class', 'donut-container');
+        donutContainer.style.cssText = `
+            width: 60px;
+            height: 60px;
+            position: relative;
+            margin-bottom: 15px;
+        `;
+
+        // Create smaller sprinkles container
+        const sprinklesContainer = document.createElement('div');
+        sprinklesContainer.setAttribute('class', 'sprinkles-container');
+        sprinklesContainer.style.cssText = `
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 85px;
+            pointer-events: none;
+            z-index: 10001;
+        `;
+
+        // Create sprinkles for inline loader
+        for (let i = 1; i <= 8; i++) {
+            const sprinkle = document.createElement('div');
+            sprinkle.setAttribute('class', 'mini-sprinkle');
+            sprinklesContainer.appendChild(sprinkle);
+        }
+
+        // Create smaller donut SVG
+        const donutSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        donutSvg.setAttribute('class', 'donut-svg');
+        donutSvg.setAttribute('viewBox', '0 0 196.17 140.96');
+        donutSvg.style.width = '100%';
+        donutSvg.style.height = '100%';
+        donutSvg.style.animation = 'donutFloat 3s ease-in-out infinite';
+        donutSvg.style.filter = 'drop-shadow(0 5px 10px rgba(255, 140, 0, 0.3))';
+        donutSvg.innerHTML = `
+            <defs>
+                <style>
+                    .cls-1 { fill: #eb8f23; }
+                    .cls-2 { fill: #f68c1f; }
+                    .cls-3 { fill: #e17ab1; }
+                    .cls-4 { fill: #c2b59b; }
+                </style>
+            </defs>
+            <g>
+                <path class="cls-2" d="M82.55.18c43.95-1.84,117.31,9.7,113.48,68.78C189.14,175.12-26.62,159.32,2.74,51.57,12.76,14.81,47.76,1.64,82.55.18ZM51.56,11.41c-13.31,4.47-23.68,9.17-32.83,20.38-9.31,11.41-24.23,44.26,2.9,41.67,7-.67,15.3-8.33,22.61-4.74,8.92,4.38,8.78,25.45,21.27,33.41,18.93,12.06,26.73-13.34,41.02-16.29,19.79-4.09,19.87,19.59,34.28,24.47,7.11,2.41,28.26,1.87,33.78-3.12,5.15-4.66,12.52-20.68,14.19-27.56C206.39,7.06,98.08-4.23,51.56,11.41ZM102.93,92.65c-5.96,3.99-10.78,12.24-18.51,15.76-13.63,6.21-27.04-2.64-33.18-14.87-1.88-3.74-5.8-18.14-8.22-19.61-4.9-2.98-12.28,2.71-16.91,3.98-7.17,1.97-13.5,1.51-19.86-2.48,6.27,51.17,60.53,62.21,103.88,59.68,19.21-1.12,38.78-6.68,54.12-18.44-13.07,1.1-26.18,1.4-35.8-8.92-6.86-7.35-11.98-24.17-25.52-15.11Z"/>
+                <path class="cls-3" d="M51.56,11.41c46.52-15.64,154.82-4.35,137.23,68.21-1.67,6.88-9.04,22.9-14.19,27.56-5.52,4.99-26.67,5.52-33.78,3.12-14.41-4.88-14.49-28.56-34.28-24.47-14.29,2.95-22.09,28.35-41.02,16.29-12.49-7.95-12.35-29.02-21.27-33.41-7.31-3.59-15.62,4.07-22.61,4.74-27.13,2.59-12.21-30.26-2.9-41.67,9.14-11.21,19.52-15.9,32.83-20.38ZM87.48,34.94c-9.96,1.37-23.22,10.15-23.06,21.13.34,22.96,32.15,21.66,47.69,16.43,23.16-7.79,10.14-31.16-7.49-36.32-5.64-1.65-11.26-2.04-17.14-1.23ZM168.79,42.69c-3.74,1.11,1.2,6.07,1.91,7.9,3.12,7.93,3.74,16.41.68,24.54-1.24,3.28-6.73,9.31-6.1,11.65.98,3.62,4.42.62,5.9-.91,4.33-4.49,7.95-15.7,8.05-21.86.07-4.71-3.86-23.26-10.44-21.31Z"/>
+                <path class="cls-4" d="M102.93,92.65c13.53-9.06,18.66,7.77,25.52,15.11,9.62,10.31,22.72,10.01,35.8,8.92-15.34,11.76-34.91,17.32-54.12,18.44-43.35,2.53-97.61-8.51-103.88-59.68,6.36,3.99,12.69,4.46,19.86,2.48,4.63-1.27,12.01-6.96,16.91-3.98,2.42,1.47,6.34,15.86,8.22,19.61,6.14,12.23,19.55,21.07,33.18,14.87,7.73-3.52,12.56-11.77,18.51-15.76ZM43.75,109.45c-5.95-1.17-12.5-4.37-15.22-10.1-.77-1.62-2.37-12.17-5.92-7.05s5.03,15.08,8.97,17.92c2.75,1.98,10.96,6.38,12.96,2.01l-.79-2.78Z"/>
+                <path class="cls-1" d="M87.48,34.94c5.87-.81,11.49-.42,17.14,1.23,17.63,5.16,30.65,28.53,7.49,36.32-15.54,5.23-47.34,6.53-47.69-16.43-.16-10.97,13.1-19.76,23.06-21.13ZM69.84,59.53c12.51-9.57,27.19-11.31,41.26-4.01,2.02,1.05,4.67,4.13,6.39,4.57,4.09,1.04.23-7.58-.75-9.22-4.24-7.09-15.59-11.33-23.56-11.31-6.95.02-20.38,5.02-22.57,12.26-.82,2.71-1.07,4.88-.78,7.7ZM86.47,56.79c-2.65.45-12.07,4.8-12.62,7.3,4.01,6.38,13.55,6.77,20.33,6.37,2.96-.18,20.32-2.63,20.36-5.45-6.84-7.75-18.14-9.89-28.07-8.21Z"/>
+                <path class="cls-1" d="M168.79,42.69c6.59-1.95,10.51,16.6,10.44,21.31-.1,6.16-3.71,17.37-8.05,21.86-1.48,1.53-4.92,4.53-5.9.91-.63-2.34,4.86-8.36,6.1-11.65,3.06-8.13,2.44-16.6-.68-24.54-.72-1.82-5.65-6.79-1.91-7.9Z"/>
+                <path class="cls-1" d="M43.75,109.45l.79,2.78c-2,4.37-10.21-.03-12.96-2.01-3.94-2.83-12.34-13.06-8.97-17.92,3.55-5.12,5.15,5.42,5.92,7.05,2.72,5.73,9.27,8.93,15.22,10.1Z"/>
+                <path class="cls-4" d="M69.84,59.53c-.29-2.82-.04-4.99.78-7.7,2.18-7.24,15.62-12.24,22.57-12.26,7.97-.02,19.32,4.22,23.56,11.31.98,1.64,4.84,10.26.75,9.22-1.72-.44-4.37-3.52-6.39-4.57-14.07-7.31-28.75-5.56-41.26,4.01Z"/>
+            </g>
+        `;
+
+        donutContainer.appendChild(sprinklesContainer);
+        donutContainer.appendChild(donutSvg);
+
+        // Create loading text
+        const loadingText = document.createElement('div');
+        loadingText.setAttribute('class', 'loading-text');
+        loadingText.textContent = text;
+        loadingText.style.cssText = `
+            color: var(--yellow);
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            animation: textPulse 2s ease-in-out infinite;
+        `;
+
+        loaderDiv.appendChild(donutContainer);
+        loaderDiv.appendChild(loadingText);
+
+        if (container) {
+            container.appendChild(loaderDiv);
+        }
+
+        return loaderDiv;
+    }
+
+    // Remove inline loader
+    static removeInlineLoader(loader) {
+        if (loader && loader.parentNode) {
+            loader.parentNode.removeChild(loader);
+        }
+    }
+}
+
 // core app functionality classes and utilities
 class EntryManager {
     constructor() {
@@ -801,3 +1118,11 @@ document.addEventListener('DOMContentLoaded', () => {
         window.profileManager = new ProfileManager();
     }
 });
+
+// Initialize loading animation
+document.addEventListener('DOMContentLoaded', () => {
+    window.loadingAnimation = new LoadingAnimation();
+});
+
+// Export LoadingAnimation for use in other modules
+window.LoadingAnimation = LoadingAnimation;

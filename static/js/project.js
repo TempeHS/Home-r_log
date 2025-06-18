@@ -7,8 +7,19 @@ export class ProjectView {
         this.projectName = document.querySelector('[data-project-name]')?.dataset.projectName;
         
         if (this.projectName) {
+            // Show initial loading if no commits are visible yet
+            const existingCommits = this.commitTimeline?.querySelectorAll('.commit-item');
+            if (!existingCommits || existingCommits.length === 0) {
+                this.showInitialLoading();
+            }
+            
             this.initializeEntryMapping();
             this.bindInfiniteScroll();
+            
+            // Hide initial loading after everything is set up
+            setTimeout(() => {
+                this.hideInitialLoading();
+            }, 1000);
         } else {
             console.error("Project name not found in DOM");
         }
@@ -16,9 +27,13 @@ export class ProjectView {
 
     initializeEntryMapping() {
         try {
+            // Show loading while processing entries
+            this.showEntriesLoading();
+            
             const projectDataElement = document.getElementById('projectData');
             if (!projectDataElement) {
                 console.error("Project data element not found");
+                this.hideEntriesLoading();
                 return;
             }
 
@@ -37,9 +52,15 @@ export class ProjectView {
                 }
             });
 
-            this.updateCommitEntries();
+            // Add a small delay to show the loading animation
+            setTimeout(() => {
+                this.updateCommitEntries();
+                this.hideEntriesLoading();
+            }, 800);
+            
         } catch (error) {
             console.error("Error initializing entry mapping:", error);
+            this.hideEntriesLoading();
             // Show error to user
             const errorDiv = document.createElement('div');
             errorDiv.className = 'alert alert-danger';
@@ -74,6 +95,7 @@ export class ProjectView {
                             targetEntry.classList.add('highlight');
                             setTimeout(() => targetEntry.classList.remove('highlight'), 2000);
                         } else {
+                            window.LoadingAnimation?.showLoading();
                             window.location.href = entryLink.href;
                         }
                     });
@@ -105,6 +127,10 @@ export class ProjectView {
         if (this.loading || !this.hasMore || !this.projectName) return;
         
         this.loading = true;
+        
+        // Show loading placeholder
+        this.showLoadingPlaceholder();
+        
         try {
             const response = await fetch(`/api/projects/${encodeURIComponent(this.projectName)}/commits?page=${this.currentPage + 1}`);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -115,7 +141,13 @@ export class ProjectView {
                 this.hasMore = data.length > 0;
                 if (this.hasMore) {
                     this.currentPage++;
-                    this.appendCommits(data);
+                    // Add a small delay to show the loading animation
+                    setTimeout(() => {
+                        this.appendCommits(data);
+                        this.hideLoadingPlaceholder();
+                    }, 800);
+                } else {
+                    this.hideLoadingPlaceholder();
                 }
             } else if (data.error) {
                 throw new Error(data.error);
@@ -123,6 +155,7 @@ export class ProjectView {
             
         } catch (error) {
             console.error('Error loading commits:', error);
+            this.hideLoadingPlaceholder();
             const errorDiv = document.createElement('div');
             errorDiv.className = 'alert alert-danger';
             errorDiv.textContent = `Error loading commits: ${error.message}`;
@@ -162,6 +195,61 @@ export class ProjectView {
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
+    }
+
+    showLoadingPlaceholder() {
+        const commitsContainer = document.querySelector('.commits-scroll');
+        if (!commitsContainer || this.loadingPlaceholder) return;
+        
+        this.loadingPlaceholder = window.LoadingAnimation.createInlineLoader(null, 'loading commits()...');
+        this.loadingPlaceholder.id = 'commits-loading-placeholder';
+        
+        // Add placeholder before the observer target
+        const observerTarget = commitsContainer.querySelector('.observer-target');
+        if (observerTarget) {
+            commitsContainer.insertBefore(this.loadingPlaceholder, observerTarget);
+        } else {
+            commitsContainer.appendChild(this.loadingPlaceholder);
+        }
+    }
+
+    hideLoadingPlaceholder() {
+        if (this.loadingPlaceholder) {
+            window.LoadingAnimation.removeInlineLoader(this.loadingPlaceholder);
+            this.loadingPlaceholder = null;
+        }
+    }
+
+    showInitialLoading() {
+        const commitsContainer = document.querySelector('.commits-scroll');
+        if (!commitsContainer) return;
+        
+        // Clear existing content
+        commitsContainer.innerHTML = '';
+        
+        this.initialLoader = window.LoadingAnimation.createInlineLoader(commitsContainer, 'loading project()...');
+    }
+
+    hideInitialLoading() {
+        if (this.initialLoader) {
+            window.LoadingAnimation.removeInlineLoader(this.initialLoader);
+            this.initialLoader = null;
+        }
+    }
+
+    showEntriesLoading() {
+        const entriesContainer = document.querySelector('.entries-scroll');
+        if (!entriesContainer) return;
+        
+        this.entriesLoader = window.LoadingAnimation.createInlineLoader(null, 'processing entries()...');
+        entriesContainer.appendChild(this.entriesLoader);
+    }
+
+    hideEntriesLoading() {
+        if (this.entriesLoader) {
+            window.LoadingAnimation.removeInlineLoader(this.entriesLoader);
+            this.entriesLoader = null;
+        }
     }
 }
 
