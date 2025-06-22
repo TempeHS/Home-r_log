@@ -686,22 +686,21 @@ class PrivacyManager {
 class ProfileManager {
     constructor() {
         this.bindApiKeyEvents();
-        this.loadProfileData();
         this.bind2FAEvents();
-    }
-
-    initializeErrorHandling() {
-        this.errorContainer = document.createElement('div');
-        this.errorContainer.className = 'alert alert-danger';
-        document.querySelector('.container').prepend(this.errorContainer);
+        this.bindActivityTabs();
+        this.loadProfileData();
     }
 
     showNotification(message, type = 'danger') {
         const notification = document.createElement('div');
-        notification.className = `alert alert-${type} fade show`;
-        notification.textContent = message;
-        document.querySelector('.container').prepend(notification);
-        setTimeout(() => notification.remove(), 3000);
+        notification.className = `alert alert-${type} fade show position-fixed top-0 end-0 m-3`;
+        notification.style.zIndex = '1060';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 5000);
     }
 
     logError(error, context) {
@@ -711,29 +710,14 @@ class ProfileManager {
 
     bindApiKeyEvents() {
         const generateBtn = document.getElementById('generateApiKey');
+        const regenerateBtn = document.getElementById('regenerateApiKey');
+
         if (generateBtn) {
-            generateBtn.addEventListener('click', async () => {
-                try {
-                    const response = await fetch('/api/user/generate-key', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                        }
-                    });
-                    const data = await response.json();
-                    if (response.ok) {
-                        // Option 1: Reload to show the new key
-                        window.location.reload();
-                        // Option 2: Show the key directly (uncomment if you want to display without reload)
-                        // document.getElementById('apiKeySection').innerText = data.key;
-                    } else {
-                        showNotification(data.error || 'Failed to generate API key', 'danger');
-                    }
-                } catch (err) {
-                    showNotification('Network error while generating API key', 'danger');
-                }
-            });
+            generateBtn.addEventListener('click', () => this.handleGenerateKey());
+        }
+
+        if (regenerateBtn) {
+            regenerateBtn.addEventListener('click', () => this.handleRegenerateKey());
         }
     }
 
@@ -784,12 +768,208 @@ class ProfileManager {
         });
     }
 
+    bindActivityTabs() {
+        const tabs = document.querySelectorAll('#activityTabs .nav-link');
+        tabs.forEach(tab => {
+            tab.addEventListener('shown.bs.tab', (e) => {
+                const target = e.target.getAttribute('href');
+                this.loadTabContent(target);
+            });
+        });
+
+        // Load initial tab content
+        this.loadTabContent('#projects-activity');
+    }
+
+    async loadTabContent(tabId) {
+        try {
+            switch (tabId) {
+                case '#projects-activity':
+                    await this.loadProjectsActivity();
+                    break;
+                case '#forum-posts':
+                    await this.loadForumPostsActivity();
+                    break;
+                case '#comments':
+                    await this.loadCommentsActivity();
+                    break;
+            }
+        } catch (error) {
+            this.logError(error, `Loading tab content for ${tabId}`);
+        }
+    }
+
+    async loadProjectsActivity() {
+        const container = document.getElementById('projectsContainer');
+        if (!container) return;
+
+        try {
+            const response = await fetch('/api/entries');
+            if (!response.ok) throw new Error('Failed to fetch entries');
+            
+            const entries = await response.json();
+            this.displayProjectsActivity(entries, container);
+        } catch (error) {
+            container.innerHTML = '<div class="alert alert-danger">Failed to load project activity</div>';
+            throw error;
+        }
+    }
+
+    async loadForumPostsActivity() {
+        const container = document.getElementById('forumPostsContainer');
+        if (!container) return;
+
+        try {
+            const response = await fetch('/api/user/forum-posts');
+            if (!response.ok) throw new Error('Failed to fetch forum posts');
+            
+            const posts = await response.json();
+            this.displayForumPostsActivity(posts, container);
+        } catch (error) {
+            container.innerHTML = '<div class="alert alert-danger">Failed to load forum posts</div>';
+            throw error;
+        }
+    }
+
+    async loadCommentsActivity() {
+        const container = document.getElementById('commentsContainer');
+        if (!container) return;
+
+        try {
+            // Fetch both forum comments and entry comments
+            const [forumResponse, entryResponse] = await Promise.all([
+                fetch('/api/user/forum-comments'),
+                fetch('/api/user/entry-comments')
+            ]);
+            
+            if (!forumResponse.ok || !entryResponse.ok) {
+                throw new Error('Failed to fetch comments');
+            }
+            
+            const forumComments = await forumResponse.json();
+            const entryComments = await entryResponse.json();
+            
+            this.displayCommentsActivity(forumComments, entryComments, container);
+        } catch (error) {
+            container.innerHTML = '<div class="alert alert-danger">Failed to load comments</div>';
+            throw error;
+        }
+    }
+
+    displayProjectsActivity(entries, container) {
+        const projectGroups = this.groupEntriesByProject(entries);
+        
+        if (Object.keys(projectGroups).length === 0) {
+            container.innerHTML = `
+                <div class="alert alert-info">
+                    <i class="bi bi-folder-plus"></i> 
+                    No project entries yet. <a href="/projects">Create your first project</a> to get started!
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        Object.entries(projectGroups).forEach(([projectName, projectEntries]) => {
+            const visibleEntries = projectEntries.slice(0, 2);
+            const hasMore = projectEntries.length > 2;
+            
+            html += `
+                <div class="project-activity-card card mb-3" data-project="${escapeHtml(projectName)}">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0 text-yellow">${escapeHtml(projectName)}</h6>
+                            <small class="text-muted">${projectEntries.length} total entries</small>
+                        </div>
+                        ${hasMore ? `
+                            <button class="expand-toggle" type="button" title="Show all entries">
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                    <div class="card-body">
+                        <div class="visible-entries">
+                            ${visibleEntries.map(entry => this.createEntryPreview(entry)).join('')}
+                        </div>
+                        ${hasMore ? `
+                            <div class="hidden-entries" style="display: none;">
+                                ${projectEntries.slice(2).map(entry => this.createEntryPreview(entry)).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+        this.bindProjectCardEvents();
+    }
+
+    createEntryPreview(entry) {
+        const date = new Date(entry.timestamp).toLocaleDateString();
+        const content = entry.content && entry.content.length > 100 ? 
+            entry.content.substring(0, 100) + '...' : 
+            (entry.content || 'No content');
+
+        return `
+            <div class="project-entry-preview" data-entry-id="${entry.id}">
+                <div class="entry-title">${escapeHtml(entry.title || 'Untitled Entry')}</div>
+                <div class="entry-content">${escapeHtml(content)}</div>
+                <div class="entry-meta">
+                    <span>${date}</span>
+                    ${entry.time_worked ? `<span class="ms-2">${entry.time_worked} min</span>` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    bindProjectCardEvents() {
+        // Handle expand/collapse
+        document.querySelectorAll('.expand-toggle').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const card = button.closest('.project-activity-card');
+                const hiddenEntries = card.querySelector('.hidden-entries');
+                const isExpanded = card.classList.contains('expanded');
+
+                if (isExpanded) {
+                    hiddenEntries.style.display = 'none';
+                    card.classList.remove('expanded');
+                } else {
+                    hiddenEntries.style.display = 'block';
+                    card.classList.add('expanded');
+                }
+            });
+        });
+
+        // Handle entry clicks
+        document.querySelectorAll('.project-entry-preview').forEach(preview => {
+            preview.addEventListener('click', () => {
+                const entryId = preview.dataset.entryId;
+                if (entryId) {
+                    window.location.href = `/entry/${entryId}`;
+                }
+            });
+        });
+    }
+
+    groupEntriesByProject(entries) {
+        return entries.reduce((groups, entry) => {
+            const project = entry.project_name || entry.project || 'Uncategorized';
+            if (!groups[project]) {
+                groups[project] = [];
+            }
+            groups[project].push(entry);
+            return groups;
+        }, {});
+    }
+
     async handleGenerateKey() {
         try {
             const response = await fetch('/api/user/generate-key', {
                 method: 'POST',
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
                 }
             });
             
@@ -822,14 +1002,13 @@ class ProfileManager {
             if (projectCount) projectCount.textContent = data.project_count;
             if (entryCount) entryCount.textContent = data.entry_count;
             
-            this.displayRecentEntries(data.entries);
-            
         } catch (error) {
             this.logError(error, 'Profile Data Loading');
         }
     }
 
     displayRecentEntries(entries) {
+        // Legacy method - kept for compatibility
         const recentEntries = document.getElementById('recentEntries');
         if (!recentEntries) return;
 
@@ -838,22 +1017,119 @@ class ProfileManager {
             return;
         }
 
-        recentEntries.innerHTML = entries.map(entry => `
-            <div class="card mb-3 entry-preview">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <h5 class="card-title project-name">${entry.project}</h5>
-                        <small class="text-muted">${new Date(entry.timestamp).toLocaleString()}</small>
-                    </div>
-                    <p class="card-text">${entry.content}</p>
-                    ${entry.repository_url ? `
-                        <a href="${entry.repository_url}" target="_blank" class="btn btn-sm btn-primary">
-                            View Repository
-                        </a>
-                    ` : ''}
+        recentEntries.innerHTML = entries.map(entry => createEntryCard(entry)).join('');
+    }
+
+    displayForumPostsActivity(posts, container) {
+        if (!posts || posts.length === 0) {
+            container.innerHTML = `
+                <div class="alert alert-info">
+                    <i class="bi bi-chat-square-text"></i> 
+                    No forum posts yet. <a href="/forums">Join the discussion</a> to get started!
                 </div>
-            </div>
-        `).join('');
+            `;
+            return;
+        }
+
+        let html = '';
+        posts.forEach(post => {
+            const date = new Date(post.created_at).toLocaleDateString();
+            html += `
+                <div class="forum-post-card card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="card-title mb-0">
+                                <a href="${post.topic_url}" class="text-decoration-none text-yellow">
+                                    ${escapeHtml(post.title)}
+                                </a>
+                            </h6>
+                            <span class="badge bg-secondary">${post.replies_count} replies</span>
+                        </div>
+                        <p class="card-text text-muted small mb-2">${escapeHtml(post.content)}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="bi bi-calendar3"></i> ${date} in 
+                                <a href="${post.forum_url}" class="text-muted">${escapeHtml(post.forum_name)}</a>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    displayCommentsActivity(forumComments, entryComments, container) {
+        const allComments = [];
+        
+        // Process forum comments
+        forumComments.forEach(comment => {
+            allComments.push({
+                ...comment,
+                type: 'forum',
+                title: comment.topic_title,
+                url: comment.topic_url,
+                context: comment.forum_name
+            });
+        });
+        
+        // Process entry comments
+        entryComments.forEach(comment => {
+            allComments.push({
+                ...comment,
+                type: 'entry',
+                title: comment.entry_title,
+                url: comment.entry_url,
+                context: `${comment.project_name} Project`
+            });
+        });
+        
+        // Sort by date (most recent first)
+        allComments.sort((a, b) => {
+            const dateA = new Date(a.created_at || a.timestamp);
+            const dateB = new Date(b.created_at || b.timestamp);
+            return dateB - dateA;
+        });
+
+        if (allComments.length === 0) {
+            container.innerHTML = `
+                <div class="alert alert-info">
+                    <i class="bi bi-chat-dots"></i> 
+                    No comments yet. Start engaging with entries and forum discussions!
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        allComments.forEach(comment => {
+            const date = new Date(comment.created_at || comment.timestamp).toLocaleDateString();
+            const typeIcon = comment.type === 'forum' ? 'chat-square-text' : 'journal-text';
+            const typeLabel = comment.type === 'forum' ? 'Forum' : 'Entry';
+            
+            html += `
+                <div class="comment-card card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="card-title mb-0">
+                                <i class="bi bi-${typeIcon}"></i>
+                                <a href="${comment.url}" class="text-decoration-none text-yellow ms-1">
+                                    ${escapeHtml(comment.title)}
+                                </a>
+                            </h6>
+                            <span class="badge bg-primary">${typeLabel}</span>
+                        </div>
+                        <p class="card-text mb-2">${escapeHtml(comment.content)}</p>
+                        <small class="text-muted">
+                            <i class="bi bi-calendar3"></i> ${date} in ${escapeHtml(comment.context)}
+                        </small>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
     }
 }
 

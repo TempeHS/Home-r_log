@@ -2,90 +2,210 @@
 
 {% block content %}
 <div class="container-fluid mt-4" data-project-name="{{ project.name }}">
-    <!-- Project Header -->
-    <div class="text-center mb-5">
-        <h1 class="display-4">{{ project.name }}</h1>
-        <div class="btn-group mt-2">
-            <a href="{{ project.repository_url }}" target="_blank" class="btn btn-outline-primary">
-                <i class="bi bi-github"></i> View Repository
-            </a>
-        </div>
-        <p class="lead mt-3">{{ project.description }}</p>
-        <div class="text-muted">
-            <small>Created by: {{ project.created_by }} | {{ project.created_at|format_date }}</small>
+    <!-- Dashboard Card -->
+    <div class="row">
+        <div class="col-12">
+            <div class="message-box mb-4" role="status">
+                <p class="mono-text">project("{{ project.name }}") :: development_workspace</p>
+            </div>
         </div>
     </div>
 
-    <!-- Content Split -->
     <div class="row">
-        <!-- Left Side - Entries -->
-        <div class="col-md-6">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="mb-0">Project Entries</h3>
-                    <a href="{{ url_for('index', project_name=project.name) }}" class="btn btn-primary btn-sm">
-                        <i class="bi bi-plus-circle"></i> New Entry
-                    </a>
-                </div>
-                <div class="card-body entries-scroll">
-                    {% for entry in entries %}
-                    <div class="entry-preview mb-4" data-entry-id="{{ entry.id }}" data-commit-sha="{{ entry.commit_sha }}">
-                        <div class="card">
-                            <div class="card-header">
-                                <a href="{{ url_for('view_entry', entry_id=entry.id) }}" class="text-decoration-none">
-                                    <h4 class="mb-0">{{ entry.title }}</h4>
-                                </a>
-                            </div>
-                            <div class="card-body">
-                                <p>{{ entry.content[:200] }}{% if entry.content|length > 200 %}...{% endif %}</p>
-                                <div class="entry-metadata">
-                                    <span class="developer-tag">{{ entry.developer_tag }}</span>
-                                    <small class="text-muted">{{ entry.timestamp|format_date }}</small>
-                                </div>
-                            </div>
-                        </div>
+        <!-- Left Column: Project Details -->
+        <div class="col-md-3">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h3 class="card-title">{{ project.name }}</h3>
+                    <p class="project-description">{{ project.description }}</p>
+                    
+                    <!-- Language Tags -->
+                    <div class="language-tags mb-3">
+                        <h5>Languages</h5>
+                        {% for tag in project.tags %}
+                        {% if tag.has_default_forums() %}
+                        <a href="{{ url_for('forums.language_forum', language=tag.name, category='general') }}" 
+                           class="language-tag-link text-decoration-none">
+                            <span class="language-tag">
+                                <img src="{{ url_for('static', filename=tag.get_icon_path()) }}" 
+                                     alt="{{ tag.name }}" class="language-icon" 
+                                     onerror="this.style.display='none'">
+                                {{ tag.name }}
+                            </span>
+                        </a>
+                        {% else %}
+                        <span class="language-tag">
+                            <img src="{{ url_for('static', filename=tag.get_icon_path()) }}" 
+                                 alt="{{ tag.name }}" class="language-icon" 
+                                 onerror="this.style.display='none'">
+                            {{ tag.name }}
+                        </span>
+                        {% endif %}
+                        {% endfor %}
                     </div>
-                    {% endfor %}
+
+                    <!-- Project Links -->
+                    <div class="project-links mb-3">
+                        <h5>Links</h5>
+                        <a href="{{ project.repository_url }}" target="_blank" class="btn btn-outline-primary mb-2 w-100">
+                            <i class="bi bi-github"></i> GitHub Repository
+                        </a>
+                        <a href="{{ url_for('forums.project_forum', project_name=project.name, category='general') }}" class="btn btn-outline-primary mb-2 w-100">
+                            <i class="bi bi-chat-dots"></i> Project Forum
+                        </a>
+                    </div>
+
+                    <!-- Team Members -->
+                    <div class="team-members">
+                        <h5>Team Members</h5>
+                        {% for member in project.members %}
+                        <span class="badge developer-tag">{{ member.developer_tag }}</span>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Right Side - Development Roadmap -->
-        <div class="col-md-6">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h3 class="card-title mb-0">
-                        <i class="bi bi-git"></i> Development Roadmap
-                    </h3>
-                </div>
-                <div class="card-body commits-scroll">
-                    {% if commits %}
-                    <div class="commit-timeline" id="commitTimeline">
-                        {% for commit in commits|reverse %}
-                        <div class="commit-item mb-3" data-commit-sha="{{ commit.sha }}">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted">{{ commit.date }}</small>
-                            </div>
-                            <div class="commit-message">{{ commit.message }}</div>
-                            <small class="text-muted">by {{ commit.author }}</small>
-                            <div class="related-entries mt-2"></div>
+        <!-- Main Content Area -->
+        <div class="col-md-9">
+            <!-- Nav Tabs -->
+            <ul class="nav nav-tabs mb-4">
+                <li class="nav-item">
+                    <a class="nav-link active" id="entries-tab" data-bs-toggle="tab" href="#entries" role="tab">
+                        Log Entries
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="commits-tab" data-bs-toggle="tab" href="#commits" role="tab">
+                        Commits
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="forum-tab" data-bs-toggle="tab" href="#forum" role="tab">
+                        Forum
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="entries" role="tabpanel">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h4 class="mb-0">Log Entries</h4>
+                            <a href="{{ url_for('index', project_name=project.name) }}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-plus-circle"></i> New Entry
+                            </a>
                         </div>
-                        {% endfor %}
+                        <div class="card-body entries-scroll">
+                            {% for entry in entries %}
+                            <div class="entry-preview mb-4" id="entry-{{ entry.id }}" data-entry-id="{{ entry.id }}" data-commit-sha="{{ entry.commit_sha }}">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <a href="{{ url_for('view_entry', entry_id=entry.id) }}" class="text-decoration-none">
+                                            <h4 class="mb-0">{{ entry.title }}</h4>
+                                        </a>
+                                    </div>
+                                    <div class="card-body">
+                                        <p>{{ entry.content[:200] }}{% if entry.content|length > 200 %}...{% endif %}</p>
+                                        <div class="entry-metadata">
+                                            <span class="developer-tag">{{ entry.developer_tag }}</span>
+                                            <small class="text-muted">{{ entry.timestamp|format_date }}</small>
+                                        </div>
+                                        {% if entry.commit_sha %}
+                                        <div class="mt-2">
+                                            {% set matching_commit = commits|selectattr('sha', 'equalto', entry.commit_sha)|first %}
+                                            {% if matching_commit %}
+                                            <a href="{{ matching_commit.url }}" 
+                                               class="badge bg-primary text-white text-decoration-none commit-link" 
+                                               target="_blank"
+                                               title="View commit on GitHub">
+                                                <i class="bi bi-git"></i> {{ matching_commit.message[:50] }}{% if matching_commit.message|length > 50 %}...{% endif %}
+                                            </a>
+                                            {% else %}
+                                            <span class="badge bg-primary text-white" title="Commit SHA: {{ entry.commit_sha }}">
+                                                <i class="bi bi-git"></i> Commit {{ entry.commit_sha[:7] }}
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
                     </div>
-                    {% endif %}
+                </div>
+
+                <div class="tab-pane fade" id="commits" role="tabpanel">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h3 class="card-title mb-0">
+                                <i class="bi bi-git"></i> Development Roadmap
+                            </h3>
+                        </div>
+                        <div class="card-body commits-scroll">
+                            {% if commits %}
+                            <div class="commit-timeline" id="commitTimeline">
+                                {% for commit in commits|reverse %}
+                                <div class="commit-item mb-3" data-commit-sha="{{ commit.sha }}" data-commit-url="{{ commit.url }}">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">{{ commit.date|format_date }}</small>
+                                        <small class="commit-sha text-muted">{{ commit.sha[:7] }}</small>
+                                    </div>
+                                    <div class="commit-message">{{ commit.message }}</div>
+                                    <small class="text-muted">by {{ commit.author }}</small>
+                                    <div class="related-entries mt-2">
+                                        {% for entry in commit.related_entries %}
+                                        <a href="#entry-{{ entry.id }}" class="badge bg-primary text-white text-decoration-none me-1 entry-link" data-entry-id="{{ entry.id }}" title="{{ entry.title }}">
+                                            {{ entry.title[:30] }}{% if entry.title|length > 30 %}...{% endif %}
+                                        </a>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="alert alert-info">No commits found for this project.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="forum" role="tabpanel">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="forum-tabs">
+                                <a href="{{ url_for('forums.project_forum', project_name=project.name, category='general') }}" 
+                                   class="forum-tab {% if active_tab == 'general' %}active{% endif %}">
+                                    General Discussion
+                                </a>
+                                <a href="{{ url_for('forums.project_forum', project_name=project.name, category='help') }}"
+                                   class="forum-tab {% if active_tab == 'help' %}active{% endif %}">
+                                    Help & Support
+                                </a>
+                            </div>
+                            <div id="forum-content">
+                                <!-- Forum content will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-<input type="hidden" id="projectData" value='{{ entries|tojson|safe }}'>
-
 {% endblock %}
 
 {% block scripts %}
+<input type="hidden" id="projectData" value='{{ entries_json|tojson|safe }}'>
+<!-- Debug: show the actual data being passed -->
+<div id="debug-data" style="display:none;">{{ entries_json|tojson|safe }}</div>
 <script type="module">
     import { ProjectView } from "{{ url_for('static', filename='js/project.js') }}";
     document.addEventListener('DOMContentLoaded', () => {
+        console.log('DOM loaded, creating ProjectView');
+        console.log('Debug data element content:', document.getElementById('debug-data')?.textContent);
         new ProjectView();
     });
 </script>

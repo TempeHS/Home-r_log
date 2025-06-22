@@ -87,6 +87,9 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('projects') }}">projects()</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('forums.forum_index') }}">forums()</a>
+                        </li>
                         <li class="nav-item" role="none">
                             <a class="nav-link" href="{{ url_for('index') }}" role="menuitem">new_entry()</a>
                         </li>
@@ -199,5 +202,9 @@
             }
         });
     </script>
+
+    <!-- Custom page scripts -->
+    {% block scripts %}
+    {% endblock %}
 </body>
 </html>

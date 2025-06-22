@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
 from flask_login import LoginManager, login_required, current_user
 import logging
-from models import db, User, Project, LogEntry
+from models import db, User, Project, LogEntry, LanguageTag, ForumCategory
 from api.data_manager import DataManager
 from api.user_manager import UserManager
 from api import api
@@ -18,8 +18,9 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.exceptions import HTTPException  
 import tempfile
 from datetime import timedelta
+from api.forums import forums_bp
 
-# Configure logging
+# configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -44,7 +45,7 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production
 app.config['SESSION_TYPE'] = 'filesystem'
 
-# Update session configuration
+# update session configuration
 app.config.update(
     SESSION_FILE_DIR=os.path.join(tempfile.gettempdir(), 'flask_session'),
     SESSION_FILE_THRESHOLD=500,  # Number of files before cleanup
@@ -54,7 +55,7 @@ app.config.update(
 
 Session(app)  # Initialize Flask-Session
 
-# Add this after app creation in main.py
+# add this after app creation in main.py
 app.wsgi_app = ProxyFix(
     app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
 )
@@ -79,15 +80,18 @@ db_path = os.path.join(basedir, '.databaseFiles', 'devlog.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# CSRF Configuration
+# cSRF Configuration
 app.config['WTF_CSRF_CHECK_DEFAULT'] = False
 app.config['WTF_CSRF_HEADERS'] = ['X-CSRF-TOKEN']
 app.config['WTF_CSRF_SSL_STRICT'] = True  
 
 db.init_app(app)
-app.register_blueprint(api, url_prefix='/api')
 
-# Initialize migrations
+# register blueprints
+app.register_blueprint(api, url_prefix='/api')
+app.register_blueprint(forums_bp, url_prefix='/forums')
+
+# initialize migrations
 migrate = Migrate(app, db)
 
 print("Available routes:", [str(rule) for rule in app.url_map.iter_rules()])
@@ -182,33 +186,52 @@ def projects():
 @app.route('/projects/<string:project_name>')
 @login_required
 def view_project(project_name):
-    project = Project.query.get_or_404(project_name)
-    entries = LogEntry.query.filter_by(project_name=project_name).order_by(LogEntry.timestamp.desc()).all()
-    
-    # Convert entries to dictionary format
-    entries_dict = [entry.to_dict() for entry in entries]
-    
-    # Get commits for the project
-    gogitter = GoGitter()
     try:
-        commits = gogitter.get_commit_history(project.repository_url)
-        formatted_commits = []
-        for commit in commits:
-            formatted_commits.append({
+        project = Project.query.get_or_404(project_name)
+        entries = LogEntry.query.filter_by(project_name=project_name)\
+                              .order_by(LogEntry.timestamp.desc())\
+                              .all()
+                              
+        # Get forum categories for this project
+        forums = ForumCategory.query.filter_by(project_name=project_name).all()
+        
+        # Get commits from GitHub
+        gogitter = GoGitter()
+        commits_data = gogitter.get_commit_history(project.repository_url)
+        
+        # Format commits for template with related entries
+        commits = []
+        for commit in commits_data:
+            # Find entries related to this commit
+            related_entries = LogEntry.query.filter_by(
+                project_name=project_name, 
+                commit_sha=commit.sha
+            ).all()
+            
+            commits.append({
                 'sha': commit.sha,
                 'message': commit.commit.message,
                 'author': commit.commit.author.name,
-                'date': commit.commit.author.date.isoformat() if hasattr(commit.commit.author.date, 'isoformat') else str(commit.commit.author.date),
-                'url': commit.html_url
+                'date': commit.commit.author.date,
+                'url': commit.html_url,
+                'related_entries': [{'id': entry.id, 'title': entry.title} for entry in related_entries]
             })
+        
+        entries_json = [entry.to_dict() for entry in entries]
+        logger.info(f"Entries JSON: {entries_json}")
+        logger.info(f"Commits with related entries: {[(c['sha'][:7], len(c['related_entries'])) for c in commits]}")
+        
+        return render_template('project.html',
+                             project=project,
+                             entries=entries,
+                             entries_json=entries_json,
+                             commits=commits,
+                             forums=forums)
+                             
     except Exception as e:
-        logger.error(f"Failed to fetch commits: {str(e)}")
-        formatted_commits = []
-    
-    return render_template('project.html', 
-                         project=project.to_dict(), 
-                         entries=entries_dict,
-                         commits=formatted_commits)
+        logger.error(f"Error viewing project: {str(e)}", exc_info=True)
+        flash('Error loading project', 'error')
+        return redirect(url_for('projects'))
 
 @app.route('/projects/new', methods=['GET', 'POST'])
 @login_required
@@ -216,6 +239,7 @@ def new_project():
     logger.info("New project creation attempt")
     try:
         if request.method == 'POST':
+            # Get form data
             name = request.form.get('name')
             description = request.form.get('description')
             repository_url = request.form.get('repository_url')
@@ -249,6 +273,26 @@ def new_project():
             if current_user not in project.team_members:
                 project.team_members.append(current_user)
             
+            # Get languages from GitHub and create tags
+            gogitter = GoGitter()
+            languages = gogitter.get_repository_languages(repository_url)
+            
+            for lang in languages:
+                # Check if tag exists, create if not
+                tag = LanguageTag.query.filter_by(name=lang.lower()).first()
+                if not tag:
+                    tag = LanguageTag(name=lang.lower())
+                    db.session.add(tag)
+                project.tags.append(tag)
+            
+            # Create forum categories for the project
+            for category in ['general', 'help']:
+                forum = ForumCategory(
+                    name=category,
+                    project_name=project.name
+                )
+                db.session.add(forum)
+            
             db.session.add(project)
             db.session.commit()
             
@@ -266,7 +310,7 @@ def new_project():
         flash('Error creating project', 'error')
         
     users = User.query.all()
-    return render_template('newproject.html', users=users)
+    return render_template('new_project.html', users=users)
 
 @app.route('/entry/new/<string:project_name>', methods=['GET', 'POST'])
 @login_required
@@ -325,6 +369,12 @@ def format_date(value, format='%Y-%m-%d %H:%M'):
     if isinstance(value, datetime):
         return value.strftime(format)
     return str(value)
+
+@app.template_filter('datetime')
+def format_datetime(value):
+    if isinstance(value, str):
+        value = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    return value.strftime('%Y-%m-%d %H:%M:%S')
 
 #HAVE THIS AT THE END!!!!
 if __name__ == '__main__':

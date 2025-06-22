@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Dashboard Card -->
+    <div class="row">
+        <div class="col-12">
+            <div class="message-box mb-4" role="status">
+                <p class="mono-text">new_topic() :: forum_post_composer</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>Create New Topic - {{ project.name }} {{ category.capitalize() }}</h2>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('forums.new_topic', project_name=project.name, category=category) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-3">
+                    <label for="title" class="form-label">Title</label>
+                    <input type="text" class="form-control" id="title" name="title" required>
+                </div>
+                <div class="mb-3">
+                    <label for="content" class="form-label">Content</label>
+                    <textarea class="form-control" id="content" name="content" rows="10" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Create Topic</button>
+                <a href="{{ url_for('forums.project_forum', project_name=project.name, category=category) }}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

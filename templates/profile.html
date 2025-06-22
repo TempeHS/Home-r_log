@@ -2,6 +2,15 @@
 
 {% block content %}
 <div class="container mt-4">
+    <!-- Dashboard Card -->
+    <div class="row">
+        <div class="col-12">
+            <div class="message-box mb-4" role="status">
+                <p class="mono-text">profile() :: user_management_dashboard</p>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-md-4">
             <div class="sticky-column">
@@ -83,23 +92,70 @@ curl -X POST http://your-api/api/entries \
             </div>
         </div>
 
-        <!-- activity -->
+        <!-- Activity Dashboard -->
         <div class="col-md-8">
             <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Activity Dashboard</h5>
+                </div>
                 <div class="card-body">
-                    <h5 class="card-title">Recent Activity</h5>
-                    <div id="recentEntries"></div>
+                    <!-- Activity Tabs -->
+                    <ul class="nav nav-tabs profile-tabs mb-4" id="activityTabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="projects-tab" data-bs-toggle="tab" href="#projects-activity" role="tab">
+                                <i class="bi bi-folder"></i> Projects
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="forum-posts-tab" data-bs-toggle="tab" href="#forum-posts" role="tab">
+                                <i class="bi bi-chat-dots"></i> Forum Posts
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="comments-tab" data-bs-toggle="tab" href="#comments" role="tab">
+                                <i class="bi bi-chat-text"></i> Comments
+                            </a>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content" id="activityTabContent">
+                        <!-- Projects Tab -->
+                        <div class="tab-pane fade show active" id="projects-activity" role="tabpanel">
+                            <div id="projectsContainer">
+                                <div class="loading-placeholder text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading projects...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Forum Posts Tab -->
+                        <div class="tab-pane fade" id="forum-posts" role="tabpanel">
+                            <div id="forumPostsContainer">
+                                <div class="loading-placeholder text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading forum posts...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Comments Tab -->
+                        <div class="tab-pane fade" id="comments" role="tabpanel">
+                            <div id="commentsContainer">
+                                <div class="loading-placeholder text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading comments...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block message_box %}
-<div class="container mt-4">
-    <div class="message-box">
-        <p class="mono-text">profile :: manage_your_account</p>
     </div>
 </div>
 {% endblock %}

@@ -1,0 +1,12 @@
+{% if project.tags %}
+<div class="project-tags mb-3">
+    <h5 class="text-yellow">Languages</h5>
+    <div class="d-flex flex-wrap gap-2">
+        {% for tag in project.tags %}
+        <a href="{{ url_for('forums.language_forum', language=tag.name, category='general') }}" class="language-tag">
+            {{ tag.name|title }}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}

@@ -1,8 +1,123 @@
-from flask import session
+from flask import session, Blueprint, jsonify, request
 from datetime import datetime, timedelta
-from models import User, LogEntry, db
+from models import User, LogEntry, ForumTopic, ForumReply, Comment, db
 from .data_manager import DataManager
+from flask_login import login_required, current_user
 import bcrypt
+
+# Create API blueprint for user activity
+user_activity_bp = Blueprint('user_activity', __name__)
+
+@user_activity_bp.route('/forum-posts')
+@login_required
+def get_user_forum_posts():
+    """get current user's forum posts/topics"""
+    try:
+        # Get topics created by the current user
+        topics = ForumTopic.query.filter_by(author_id=current_user.developer_tag)\
+                                .order_by(ForumTopic.created_at.desc())\
+                                .all()
+        
+        result = []
+        for topic in topics:
+            # Determine forum type and URL
+            category = topic.category
+            if category.project_name:
+                # Project forum
+                forum_url = f"/projects/{category.project_name}#forum"
+                forum_name = f"{category.project_name} - {category.name.title()}"
+            else:
+                # Language forum
+                language_name = category.language_tag.name if category.language_tag else "General"
+                forum_url = f"/forums/{language_name}/{category.name}"
+                forum_name = f"{language_name.title()} - {category.name.title()}"
+            
+            result.append({
+                'id': topic.id,
+                'title': topic.title,
+                'content': topic.content[:200] + ('...' if len(topic.content) > 200 else ''),
+                'created_at': topic.created_at.isoformat(),
+                'updated_at': topic.updated_at.isoformat(),
+                'replies_count': topic.replies.count(),
+                'forum_name': forum_name,
+                'forum_url': forum_url,
+                'topic_url': f"{forum_url.split('#')[0]}/topic/{topic.id}"
+            })
+        
+        return jsonify(result)
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@user_activity_bp.route('/forum-comments')
+@login_required
+def get_user_forum_comments():
+    """get current user's forum replies/comments"""
+    try:
+        # Get forum replies by the current user
+        replies = ForumReply.query.filter_by(author_id=current_user.developer_tag)\
+                                 .order_by(ForumReply.created_at.desc())\
+                                 .all()
+        
+        result = []
+        for reply in replies:
+            topic = reply.topic
+            category = topic.category
+            
+            # Determine forum type and URL
+            if category.project_name:
+                # Project forum
+                forum_url = f"/projects/{category.project_name}#forum"
+                forum_name = f"{category.project_name} - {category.name.title()}"
+            else:
+                # Language forum
+                language_name = category.language_tag.name if category.language_tag else "General"
+                forum_url = f"/forums/{language_name}/{category.name}"
+                forum_name = f"{language_name.title()} - {category.name.title()}"
+            
+            result.append({
+                'id': reply.id,
+                'content': reply.content[:150] + ('...' if len(reply.content) > 150 else ''),
+                'created_at': reply.created_at.isoformat(),
+                'topic_id': topic.id,
+                'topic_title': topic.title,
+                'forum_name': forum_name,
+                'topic_url': f"{forum_url.split('#')[0]}/topic/{topic.id}#{reply.id}"
+            })
+        
+        return jsonify(result)
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@user_activity_bp.route('/entry-comments')
+@login_required  
+def get_user_entry_comments():
+    """get current user's comments on log entries"""
+    try:
+        # Get comments by the current user
+        comments = Comment.query.filter_by(user_id=current_user.developer_tag)\
+                               .order_by(Comment.timestamp.desc())\
+                               .all()
+        
+        result = []
+        for comment in comments:
+            entry = comment.entry
+            result.append({
+                'id': comment.id,
+                'content': comment.content[:150] + ('...' if len(comment.content) > 150 else ''),
+                'timestamp': comment.timestamp.isoformat(),
+                'entry_id': entry.id,
+                'entry_title': entry.title,
+                'project_name': entry.project_name,
+                'entry_url': f"/entry/{entry.id}#comment-{comment.id}",
+                'parent_id': comment.parent_id
+            })
+        
+        return jsonify(result)
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # user authentication and session management
 

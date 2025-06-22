@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Dashboard Card -->
+    <div class="row">
+        <div class="col-12">
+            <div class="message-box mb-4" role="status">
+                <p class="mono-text">forum("{{ language_tag.name }}") :: language_discussion_hub</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Language Forum Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex align-items-center mb-3">
+                <a href="{{ url_for('forums.forum_index') }}" class="btn btn-outline-secondary me-3">
+                    <i class="bi bi-arrow-left"></i> Back to Forums
+                </a>
+                <div class="d-flex align-items-center">
+                    <img src="{{ url_for('static', filename=language_tag.get_icon_path()) }}" 
+                         alt="{{ language_tag.name }}" 
+                         class="language-forum-icon me-3"
+                         onerror="this.style.display='none'">
+                    <h1 class="mb-0">{{ language_tag.name|title }} Forum</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forum Categories -->
+    <div class="row">
+        <div class="col-md-12">
+            <!-- Category Tabs -->
+            <ul class="nav nav-tabs mb-4">
+                <li class="nav-item">
+                    <a class="nav-link {% if active_tab == 'general' %}active{% endif %}" 
+                       href="{{ url_for('forums.language_forum', language=language_tag.name, category='general') }}">
+                        <i class="bi bi-chat-dots"></i> General Discussion
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_tab == 'help' %}active{% endif %}"
+                       href="{{ url_for('forums.language_forum', language=language_tag.name, category='help') }}">
+                        <i class="bi bi-question-circle"></i> Help & Support
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Forum Content -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">
+                        {% if active_tab == 'general' %}
+                            General Discussion
+                        {% else %}
+                            Help & Support
+                        {% endif %}
+                    </h3>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newTopicModal">
+                        <i class="bi bi-plus-circle"></i> New Topic
+                    </button>
+                </div>
+                <div class="card-body">
+                    <!-- Search Bar -->
+                    <div class="forum-search mb-4">
+                        <input type="text" id="topicSearch" placeholder="Search topics..." class="form-control">
+                    </div>
+
+                    <!-- Topics List -->
+                    <div class="forum-topics">
+                        {% if topics %}
+                            {% for topic in topics %}
+                            <div class="forum-topic-card" data-topic-id="{{ topic.id }}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h5 class="forum-topic-title mb-2">
+                                            <a href="{{ url_for('forums.view_language_topic', 
+                                                     language=language_tag.name, 
+                                                     category=active_tab, 
+                                                     topic_id=topic.id) }}" 
+                                               class="text-decoration-none">
+                                                {{ topic.title }}
+                                            </a>
+                                        </h5>
+                                        <p class="text-muted mb-2">{{ topic.content[:150] }}{% if topic.content|length > 150 %}...{% endif %}</p>
+                                        <div class="forum-topic-metadata">
+                                            <span class="badge developer-tag">{{ topic.author_id }}</span>
+                                            <small class="text-muted ms-2">{{ topic.created_at|format_date }}</small>
+                                            <small class="text-muted ms-3">
+                                                <i class="bi bi-chat"></i> {{ topic.replies.count() }} replies
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="bi bi-chat-dots display-1 text-muted"></i>
+                                <h4 class="mt-3">No topics yet</h4>
+                                <p class="text-muted">Be the first to start a discussion in this {{ active_tab }} forum!</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Topic Modal -->
+<div class="modal fade" id="newTopicModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    New Topic - {{ language_tag.name|title }} 
+                    {% if active_tab == 'general' %}General{% else %}Help{% endif %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="newTopicForm" method="POST" action="{{ url_for('forums.create_language_topic', language=language_tag.name, category=active_tab) }}">
+                    <div class="mb-3">
+                        <label for="topicTitle" class="form-label">Title</label>
+                        <input type="text" class="form-control" id="topicTitle" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="topicContent" class="form-label">Content</label>
+                        <textarea class="form-control" id="topicContent" name="content" rows="6" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="newTopicForm" class="btn btn-primary">Create Topic</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module">
+    import { ForumManager } from "{{ url_for('static', filename='js/forum.js') }}";
+    document.addEventListener('DOMContentLoaded', () => {
+        const forumContainer = document.querySelector('.forum-topics').closest('.card');
+        if (forumContainer) {
+            forumContainer.dataset.categoryId = "{{ category_id }}";
+            new ForumManager(forumContainer);
+        }
+    });
+</script>
+{% endblock %}

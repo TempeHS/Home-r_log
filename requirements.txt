@@ -10,5 +10,5 @@ bleach==6.1.0
 SQLAlchemy==2.0.25
 requests==2.32.0
 Werkzeug==3.0.6
-PyGithub==2.1.1
+PyGithub==1.59.0
 python-dotenv==1.0.0

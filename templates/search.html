@@ -1,69 +1,241 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4 search-page-container">
+    <!-- Dashboard Card -->
     <div class="row">
         <div class="col-12">
-            <section class="card" aria-labelledby="search-heading">
+            <div class="message-box mb-4" role="status">
+                <p class="mono-text">search() :: advanced_query_interface</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="text-yellow">Advanced Search</h1>
+            <p class="text-muted">Search across entries, projects, and forums with powerful filters</p>
+        </div>
+    </div>
+
+    <!-- Search Mode Tabs -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <ul class="nav nav-tabs search-mode-tabs" id="searchModeTabs">
+                <li class="nav-item">
+                    <a class="nav-link active" id="entries-tab" data-mode="entries" href="#entries">
+                        <i class="bi bi-journal-text"></i> Entries
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="projects-tab" data-mode="projects" href="#projects">
+                        <i class="bi bi-folder"></i> Projects
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="forums-tab" data-mode="forums" href="#forums">
+                        <i class="bi bi-chat-dots"></i> Forums
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Search Form -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card search-form-card">
                 <div class="card-body">
-                    <h2 id="search-heading" class="card-title">Search Entries</h2>
-                    <form id="searchForm" role="search">
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label for="projectSearch" class="visually-hidden">Project name</label>
-                                <input type="text" class="form-control" id="projectSearch" 
-                                       list="projectList" placeholder="Search by project name"
-                                       aria-label="Search by project name">
-                                <datalist id="projectList"></datalist>
+                    <form id="advancedSearchForm">
+                        <!-- Main Search Input -->
+                        <div class="mb-4">
+                            <label for="searchText" class="form-label">Search Text</label>
+                            <input type="text" class="form-control search-input" id="searchText" 
+                                   placeholder="Enter keywords to search..." autocomplete="off">
+                        </div>
+
+                        <!-- Filter Panels -->
+                        <div class="row">
+                            <!-- Projects Filter -->
+                            <div class="col-md-4 mb-3">
+                                <div class="filter-panel">
+                                    <label class="form-label">
+                                        <i class="bi bi-folder"></i> Projects
+                                        <span class="filter-count" id="projectCount">(0)</span>
+                                    </label>
+                                    <div class="filter-search-container">
+                                        <input type="text" class="form-control filter-search" id="projectSearch" 
+                                               placeholder="Search projects...">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary toggle-filters" 
+                                                data-target="projectFilters">
+                                            <i class="bi bi-chevron-down"></i>
+                                        </button>
+                                    </div>
+                                    <div class="filter-options" id="projectFilters" style="display: none;">
+                                        <div class="filter-list" id="projectList">
+                                            <!-- Dynamic project checkboxes -->
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <label for="developerSearch" class="visually-hidden">Developer</label>
-                                <input type="text" class="form-control" id="developerSearch" 
-                                       list="developerList" placeholder="Search by developer"
-                                       aria-label="Search by developer">
-                                <datalist id="developerList"></datalist>
+
+                            <!-- Languages Filter -->
+                            <div class="col-md-4 mb-3">
+                                <div class="filter-panel">
+                                    <label class="form-label">
+                                        <i class="bi bi-code-slash"></i> Languages
+                                        <span class="filter-count" id="languageCount">(0)</span>
+                                    </label>
+                                    <div class="filter-search-container">
+                                        <input type="text" class="form-control filter-search" id="languageSearch" 
+                                               placeholder="Search languages...">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary toggle-filters" 
+                                                data-target="languageFilters">
+                                            <i class="bi bi-chevron-down"></i>
+                                        </button>
+                                    </div>
+                                    <div class="filter-options" id="languageFilters" style="display: none;">
+                                        <div class="filter-list" id="languageList">
+                                            <!-- Dynamic language checkboxes -->
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <label for="dateSearch" class="visually-hidden">Date</label>
-                                <input type="date" class="form-control" id="dateSearch"
-                                       aria-label="Search by date">
-                            </div>
-                            <div class="col-md-4">
-                                <label for="sortField" class="visually-hidden">Sort by</label>
-                                <select class="form-control sort-controls" id="sortField"
-                                        aria-label="Sort field">
-                                    <option value="date">Sort by Date</option>
-                                    <option value="project">Sort by Project</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="sortOrder" class="visually-hidden">Sort order</label>
-                                <select class="form-control sort-controls" id="sortOrder"
-                                        aria-label="Sort order">
-                                    <option value="desc">Descending</option>
-                                    <option value="asc">Ascending</option>
-                                </select>
+
+                            <!-- Users Filter -->
+                            <div class="col-md-4 mb-3">
+                                <div class="filter-panel">
+                                    <label class="form-label">
+                                        <i class="bi bi-person"></i> Users
+                                        <span class="filter-count" id="userCount">(0)</span>
+                                    </label>
+                                    <div class="filter-search-container">
+                                        <input type="text" class="form-control filter-search" id="userSearch" 
+                                               placeholder="Search users...">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary toggle-filters" 
+                                                data-target="userFilters">
+                                            <i class="bi bi-chevron-down"></i>
+                                        </button>
+                                    </div>
+                                    <div class="filter-options" id="userFilters" style="display: none;">
+                                        <div class="filter-list" id="userList">
+                                            <!-- Dynamic user checkboxes -->
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="row mt-3">
+
+                        <!-- Additional Filters Row -->
+                        <div class="row">
+                            <!-- Date Range -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="bi bi-calendar"></i> Date Range</label>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <input type="date" class="form-control" id="dateFrom" placeholder="From">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="date" class="form-control" id="dateTo" placeholder="To">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sort Options -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="bi bi-sort-down"></i> Sort</label>
+                                <div class="row">
+                                    <div class="col-8">
+                                        <select class="form-control" id="sortField">
+                                            <option value="timestamp">Date</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-4">
+                                        <select class="form-control" id="sortOrder">
+                                            <option value="desc">Desc</option>
+                                            <option value="asc">Asc</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Search Buttons -->
+                        <div class="row">
                             <div class="col-12">
-                                <button type="submit" class="btn btn-primary">Search Entries</button>
+                                <button type="submit" class="btn btn-primary search-btn">
+                                    <i class="bi bi-search"></i> Search
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary ms-2" id="clearFilters">
+                                    <i class="bi bi-x-circle"></i> Clear Filters
+                                </button>
                             </div>
                         </div>
                     </form>
                 </div>
-            </section>
+            </div>
         </div>
     </div>
 
-    <div class="row mt-4">
+    <!-- Query Preview Tab (positioned between search form and results) -->
+    <div class="row mb-3">
         <div class="col-12">
-            <section aria-label="Search Results">
-                <div id="searchResults" class="search-results-container" aria-live="polite">
-                    <!-- Results will be dynamically inserted here -->
+            <div class="query-preview-tab">
+                <button type="button" class="query-preview-toggle" id="queryPreviewToggle">
+                    <i class="bi bi-code-slash"></i>
+                    <span>Query Preview</span>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </button>
+                <div class="query-preview-content" id="queryPreviewContent" style="display: none;">
+                    <pre class="query-preview-code"><code id="sqlPreview">SELECT * FROM entries ORDER BY timestamp DESC;</code></pre>
                 </div>
-            </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Results -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card results-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="results-info">
+                        <h5 class="mb-0">
+                            <i class="bi bi-search"></i> 
+                            <span id="resultsTitle">Search Results</span>
+                        </h5>
+                        <small class="text-muted">
+                            <span id="resultsCount">0</span> results found
+                        </small>
+                    </div>
+                    <div class="results-controls">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="exportResults">
+                            <i class="bi bi-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="searchResults">
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-search display-1"></i>
+                            <h4 class="mt-3">Ready to Search</h4>
+                            <p>Use the filters above to find what you're looking for</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <nav aria-label="Search results pagination" id="searchPagination" style="display: none;">
+                        <ul class="pagination justify-content-center">
+                            <!-- Dynamic pagination -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/advancedSearch.js') }}"></script>
 {% endblock %}

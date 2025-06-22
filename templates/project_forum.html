@@ -1,0 +1,20 @@
+{% extends "forums/base_forum.html" %}
+
+{% block forum_header %}
+<div class="project-forum-header mb-4">
+    <div class="d-flex align-items-center justify-content-between">
+        <h2 class="mb-0">{{ project.name }}</h2>
+        <div class="project-forum-nav">
+            <a href="{{ url_for('forums.project_forum', project_name=project.name, category='general') }}" 
+               class="btn btn-outline-primary me-2 {% if active_tab == 'general' %}active{% endif %}">
+                General Discussion
+            </a>
+            <a href="{{ url_for('forums.project_forum', project_name=project.name, category='help') }}"
+               class="btn btn-outline-primary {% if active_tab == 'help' %}active{% endif %}">
+                Help & Support
+            </a>
+        </div>
+    </div>
+    {% include 'partials/language_tags.html' %}
+</div>
+{% endblock %}

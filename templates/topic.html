@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Dashboard Card -->
+    <div class="row">
+        <div class="col-12">
+            <div class="message-box mb-4" role="status">
+                <p class="mono-text">topic("{{ topic.title }}") :: discussion_thread</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="topic-container">
+        <!-- Topic header -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item"><a href="{{ url_for('view_project', project_name=project.name) }}">{{ project.name }}</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('forums.project_forum', project_name=project.name, category=category) }}">{{ category.capitalize() }}</a></li>
+                        <li class="breadcrumb-item active">{{ topic.title }}</li>
+                    </ol>
+                </nav>
+            </div>
+            <div class="card-body">
+                <h2 class="card-title">{{ topic.title }}</h2>
+                <div class="topic-metadata mb-3">
+                    <span class="badge developer-tag">{{ topic.author_id }}</span>
+                    <span class="text-muted">•</span>
+                    <span class="text-muted">{{ topic.created_at|format_date }}</span>
+                </div>
+                <div class="topic-content mb-3">{{ topic.content|safe }}</div>
+            </div>
+        </div>
+
+        <!-- Replies -->
+        <div class="replies-section">
+            <h3>Replies</h3>
+            {% if topic.replies.all() %}
+                {% for reply in topic.replies %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="reply-metadata mb-2">
+                            <span class="badge developer-tag">{{ reply.author_id }}</span>
+                            <span class="text-muted">•</span>
+                            <span class="text-muted">{{ reply.created_at|format_date }}</span>
+                        </div>
+                        <div class="reply-content mb-3">{{ reply.content|safe }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-info">No replies yet. Be the first to reply!</div>
+            {% endif %}
+
+            <!-- Reply form -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h4>Add a Reply</h4>
+                    <form method="POST" action="{{ url_for('forums.add_reply', project_name=project.name, category=category, topic_id=topic.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <textarea class="form-control" name="content" rows="5" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Post Reply</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module">
+    import { ForumManager } from "{{ url_for('static', filename='js/forum.js') }}";
+    document.addEventListener('DOMContentLoaded', () => {
+        new ForumManager(document.querySelector('.topic-container'));
+    });
+</script>
+{% endblock %}

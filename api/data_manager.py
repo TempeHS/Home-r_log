@@ -224,3 +224,18 @@ class DataManager:
                             .count()
         }
         return stats
+
+    @staticmethod
+    def sanitize_input(text):
+        """General input sanitization for search and other text inputs"""
+        if not text or not isinstance(text, str):
+            return ""
+        
+        # Remove any potentially harmful content
+        sanitized = bleach.clean(text.strip(), tags=[], strip=True)
+        
+        # Limit length to prevent extremely long inputs
+        if len(sanitized) > 1000:
+            sanitized = sanitized[:1000]
+            
+        return sanitized
