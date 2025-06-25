@@ -6,7 +6,7 @@ class LoadingAnimation {
     constructor() {
         this.loadingOverlay = null;
         this.isActive = false;
-        this.createLoadingOverlay();
+        this.initializeOverlay();
         this.bindNavigationEvents();
         
         // Don't show loading immediately if initial overlay exists
@@ -16,19 +16,21 @@ class LoadingAnimation {
         }
     }
 
-    createLoadingOverlay() {
-        // Check if initial loading overlay exists and use it
+    initializeOverlay() {
+        // Always try to use the initial loading overlay first
         this.loadingOverlay = document.getElementById('initialLoadingOverlay');
         
-        if (this.loadingOverlay) {
-            // Use existing initial overlay
-            return;
+        if (!this.loadingOverlay) {
+            // Create a new overlay only if the initial one doesn't exist
+            this.createNewOverlay();
         }
+    }
 
-        // Create the loading overlay if it doesn't exist
+    createNewOverlay() {
+        // Create the loading overlay
         this.loadingOverlay = document.createElement('div');
         this.loadingOverlay.className = 'loading-overlay';
-        this.loadingOverlay.id = 'loadingOverlay';
+        this.loadingOverlay.id = 'dynamicLoadingOverlay';
 
         // Create the sprinkles container
         const sprinklesContainer = document.createElement('div');
@@ -179,20 +181,30 @@ class LoadingAnimation {
     }
 
     show() {
-        if (this.isActive) return;
+        if (!this.loadingOverlay || this.isActive) return;
         
         this.isActive = true;
         this.loadingOverlay.classList.add('active');
         
-        // Disable scrolling
+        // Ensure proper visibility and disable scrolling
+        this.loadingOverlay.style.visibility = 'visible';
+        this.loadingOverlay.style.opacity = '1';
         document.body.style.overflow = 'hidden';
     }
 
     hide() {
-        if (!this.isActive) return;
+        if (!this.loadingOverlay || !this.isActive) return;
         
         this.isActive = false;
         this.loadingOverlay.classList.remove('active');
+        
+        // Use CSS transition for smooth fade out
+        setTimeout(() => {
+            if (!this.isActive && this.loadingOverlay) {
+                this.loadingOverlay.style.visibility = 'hidden';
+                this.loadingOverlay.style.opacity = '0';
+            }
+        }, 300);
         
         // Re-enable scrolling
         document.body.style.overflow = '';

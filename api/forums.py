@@ -245,3 +245,46 @@ def view_language_topic(language, category, topic_id):
         logger.error(f"Error viewing language topic: {str(e)}")
         flash('Error loading topic', 'error')
         return redirect(url_for('forums.language_forum', language=language, category=category))
+
+@forums_bp.route('/<language>/<category>/topics/<int:topic_id>/reply', methods=['POST'])
+@login_required
+def add_language_reply(language, category, topic_id):
+    """add a reply to a language forum topic"""
+    try:
+        if category not in ['general', 'help']:
+            abort(400, description="Invalid category")
+            
+        tag = LanguageTag.query.filter_by(name=language.lower()).first_or_404()
+        topic = ForumTopic.query.get_or_404(topic_id)
+        
+        # Verify this topic belongs to the correct language category
+        if (topic.category.language_tag_id != tag.id or 
+            topic.category.name != category or 
+            topic.category.project_name is not None):
+            abort(404)
+        
+        content = request.form.get('content', '').strip()
+        if not content:
+            flash('Reply content cannot be empty', 'error')
+            return redirect(url_for('forums.view_language_topic', 
+                                  language=language, category=category, topic_id=topic_id))
+        
+        # Create the reply
+        reply = ForumReply(
+            content=content,
+            topic_id=topic_id,
+            author_id=current_user.developer_tag
+        )
+        
+        db.session.add(reply)
+        db.session.commit()
+        
+        flash('Reply posted successfully', 'success')
+        return redirect(url_for('forums.view_language_topic', 
+                              language=language, category=category, topic_id=topic_id))
+        
+    except Exception as e:
+        logger.error(f"Error adding language reply: {str(e)}")
+        flash('Error posting reply', 'error')
+        return redirect(url_for('forums.view_language_topic', 
+                              language=language, category=category, topic_id=topic_id))

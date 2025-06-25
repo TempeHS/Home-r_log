@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, current_app
 from flask_login import current_user, login_required
-from models import db, LogEntry, EntryReaction, Comment
+from models import db, LogEntry, EntryReaction, Comment, ReactionType
 
 interactions_bp = Blueprint('interactions', __name__)
 
@@ -18,8 +18,8 @@ def toggle_reaction(entry_id):
         db.session.commit()
         
         return jsonify({
-            'likes_count': entry.reactions.filter_by(reaction_type='like').count(),
-            'dislikes_count': entry.reactions.filter_by(reaction_type='dislike').count(),
+            'likes_count': entry.reactions.filter_by(reaction_type=ReactionType.LIKE).count(),
+            'dislikes_count': entry.reactions.filter_by(reaction_type=ReactionType.DISLIKE).count(),
             'user_reaction': entry.get_user_reaction(current_user.developer_tag)
         })
         

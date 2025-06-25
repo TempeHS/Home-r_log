@@ -3,8 +3,35 @@ from datetime import datetime
 from flask_login import UserMixin
 import bcrypt
 import secrets
+import hashlib
 
 db = SQLAlchemy()
+
+# Reaction type constants for optimization
+class ReactionType:
+    NONE = 0
+    LIKE = 1
+    DISLIKE = 2
+    
+    @classmethod
+    def from_string(cls, reaction_str):
+        """Convert string reaction to integer"""
+        mapping = {
+            'like': cls.LIKE,
+            'dislike': cls.DISLIKE,
+            None: cls.NONE
+        }
+        return mapping.get(reaction_str, cls.NONE)
+    
+    @classmethod
+    def to_string(cls, reaction_int):
+        """Convert integer reaction to string"""
+        mapping = {
+            cls.LIKE: 'like',
+            cls.DISLIKE: 'dislike',
+            cls.NONE: None
+        }
+        return mapping.get(reaction_int)
 
 # Updated association table to use project name instead of id
 project_members = db.Table('project_members',
@@ -14,13 +41,30 @@ project_members = db.Table('project_members',
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email_hash = db.Column(db.String(64), unique=True, nullable=False)  # SHA-256 hash of email
     password_hash = db.Column(db.LargeBinary)
     developer_tag = db.Column(db.String(50), unique=True, nullable=False)
     two_fa_enabled = db.Column(db.Boolean, default=False)
     two_fa_verified = db.Column(db.Boolean, default=False)
-    api_key = db.Column(db.String(40), unique=True)
+    api_key_hash = db.Column(db.String(64), unique=True)  # SHA-256 hash of API key
     api_enabled = db.Column(db.Boolean, default=False)
+    
+    # Store original email temporarily for login (will be removed in production)
+    _temp_email = db.Column(db.String(120))  # Temporary field for migration
+
+    def set_email(self, email):
+        """Set email and create hash"""
+        self._temp_email = email.lower().strip()
+        self.email_hash = hashlib.sha256(email.lower().strip().encode()).hexdigest()
+
+    def verify_email(self, email):
+        """Verify email against stored hash"""
+        email_to_check = email.lower().strip()
+        return self.email_hash == hashlib.sha256(email_to_check.encode()).hexdigest()
+
+    def get_email(self):
+        """Get email (temporary method during migration)"""
+        return self._temp_email
 
     def set_password(self, password):
         salt = bcrypt.gensalt()
@@ -30,9 +74,17 @@ class User(UserMixin, db.Model):
         return bcrypt.checkpw(password.encode('utf-8'), self.password_hash)
 
     def generate_api_key(self):
-        self.api_key = f"dvlg_{secrets.token_hex(16)}"
+        """Generate API key and store its hash"""
+        api_key = f"dvlg_{secrets.token_hex(16)}"
+        self.api_key_hash = hashlib.sha256(api_key.encode()).hexdigest()
         self.api_enabled = True
-        return self.api_key
+        return api_key  # Return the actual key only once
+
+    def verify_api_key(self, api_key):
+        """Verify API key against stored hash"""
+        if not self.api_key_hash:
+            return False
+        return self.api_key_hash == hashlib.sha256(api_key.encode()).hexdigest()
 
 class Project(db.Model):
     name = db.Column(db.String(100), primary_key=True)
@@ -89,23 +141,26 @@ class LogEntry(db.Model):
             'end_time': self.end_time.isoformat() if self.end_time else None,
             'time_worked': self.time_worked,
             'commit_sha': self.commit_sha,
-            'likes_count': self.reactions.filter_by(reaction_type='like').count(),
-            'dislikes_count': self.reactions.filter_by(reaction_type='dislike').count(),
+            'likes_count': self.reactions.filter_by(reaction_type=ReactionType.LIKE).count(),
+            'dislikes_count': self.reactions.filter_by(reaction_type=ReactionType.DISLIKE).count(),
             'comments_count': self.comments.count()
         }
 
     def get_user_reaction(self, user_id):
         """get the reaction of a specific user for this entry"""
         reaction = self.reactions.filter_by(user_id=user_id).first()
-        return reaction.reaction_type if reaction else None
+        return ReactionType.to_string(reaction.reaction_type) if reaction else None
 
     def toggle_reaction(self, user_id, reaction_type):
         """toggle a user's reaction (like/dislike) for this entry"""
+        # Convert string reaction to integer
+        reaction_int = ReactionType.from_string(reaction_type)
+        
         existing_reaction = self.reactions.filter_by(user_id=user_id).first()
         
         if existing_reaction:
             # If same type, just remove it
-            if existing_reaction.reaction_type == reaction_type:
+            if existing_reaction.reaction_type == reaction_int:
                 db.session.delete(existing_reaction)
                 db.session.flush()  # Flush to ensure the unique constraint is cleared
             # If different type, remove old one and add new one
@@ -115,7 +170,7 @@ class LogEntry(db.Model):
                 new_reaction = EntryReaction(
                     entry_id=self.id,
                     user_id=user_id,
-                    reaction_type=reaction_type,
+                    reaction_type=reaction_int,
                     project_name=self.project_name
                 )
                 db.session.add(new_reaction)
@@ -124,7 +179,7 @@ class LogEntry(db.Model):
             new_reaction = EntryReaction(
                 entry_id=self.id,
                 user_id=user_id,
-                reaction_type=reaction_type,
+                reaction_type=reaction_int,
                 project_name=self.project_name
             )
             db.session.add(new_reaction)
@@ -134,7 +189,7 @@ class EntryReaction(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.String(50), db.ForeignKey('user.developer_tag'), nullable=False)
     entry_id = db.Column(db.Integer, db.ForeignKey('log_entry.id', ondelete='CASCADE'), nullable=False)
-    reaction_type = db.Column(db.String(10), nullable=False)  # 'like' or 'dislike'
+    reaction_type = db.Column(db.Integer, nullable=False, default=ReactionType.NONE)  # 0=none, 1=like, 2=dislike
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     project_name = db.Column(db.String(100), db.ForeignKey('project.name'), nullable=False)
 
@@ -142,6 +197,14 @@ class EntryReaction(db.Model):
     __table_args__ = (
         db.UniqueConstraint('user_id', 'entry_id', name='unique_user_entry_reaction'),
     )
+
+    def get_reaction_string(self):
+        """Get string representation of reaction"""
+        return ReactionType.to_string(self.reaction_type)
+
+    def set_reaction_from_string(self, reaction_str):
+        """Set reaction from string"""
+        self.reaction_type = ReactionType.from_string(reaction_str)
 
 class Comment(db.Model):
     __tablename__ = 'comment'
@@ -177,7 +240,7 @@ class LanguageTag(db.Model):
     
     def get_icon_path(self):
         """get the path to the language icon"""
-        # Map some common language variations to consistent names
+        # map some common language variations to consistent names
         icon_map = {
             'c++': 'cpp',
             'c#': 'csharp',
@@ -186,6 +249,10 @@ class LanguageTag(db.Model):
         }
         icon_name = icon_map.get(self.name.lower(), self.name.lower())
         return f'images/{icon_name}.png'
+    
+    def get_icon_fallback(self):
+        """get a fallback icon or placeholder for missing language icons"""
+        return 'images/default.png'
     
     def has_default_forums(self):
         """check if this language has default general and help forums"""

@@ -4,6 +4,7 @@ from models import User, LogEntry, ForumTopic, ForumReply, Comment, db
 from .data_manager import DataManager
 from flask_login import login_required, current_user
 import bcrypt
+import hashlib
 
 # Create API blueprint for user activity
 user_activity_bp = Blueprint('user_activity', __name__)
@@ -129,10 +130,19 @@ class UserManager:
     def authenticate(email, password):
         print(f"Authentication attempt for email: {email}")
         email = DataManager.sanitize_email(email)
-        user = User.query.filter_by(email=email).first()
+        
+        # During transition, check both hashed and unhashed emails
+        # First try to find by email hash
+        email_hash = hashlib.sha256(email.encode()).hexdigest()
+        user = User.query.filter_by(email_hash=email_hash).first()
+        
+        # Fallback to temporary email field during migration
+        if not user:
+            user = User.query.filter_by(_temp_email=email).first()
+            
         print(f"User found: {user}")
         
-        if user and bcrypt.checkpw(password.encode('utf-8'), user.password_hash):
+        if user and user.check_password(password):
             print("Password check passed")
             return user
 
@@ -140,18 +150,31 @@ class UserManager:
         return None
 
     @staticmethod
+    def authenticate_by_api_key(api_key):
+        """Authenticate user by API key"""
+        if not api_key:
+            return None
+            
+        # Hash the provided API key and find matching user
+        api_key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+        user = User.query.filter_by(api_key_hash=api_key_hash, api_enabled=True).first()
+        return user
+
+    @staticmethod
     def create_user(email, password, developer_tag):
         email = DataManager.sanitize_email(email)
         developer_tag = DataManager.sanitize_developer_tag(developer_tag)
         
-        if User.query.filter_by(email=email).first():
+        # Check if email already exists (check both hash and temp field during migration)
+        email_hash = hashlib.sha256(email.encode()).hexdigest()
+        if User.query.filter_by(email_hash=email_hash).first() or User.query.filter_by(_temp_email=email).first():
             raise ValueError("Email already registered")
         if User.query.filter_by(developer_tag=developer_tag).first():
             raise ValueError("Developer tag already taken")
         
-        user = User(email=email, developer_tag=developer_tag)
-        salt = bcrypt.gensalt()
-        user.password_hash = bcrypt.hashpw(password.encode('utf-8'), salt)
+        user = User(developer_tag=developer_tag)
+        user.set_email(email)  # This sets both email_hash and _temp_email
+        user.set_password(password)
         db.session.add(user)
         return user
 
@@ -184,7 +207,7 @@ class UserManager:
         entries = LogEntry.query.filter_by(developer_tag=user.developer_tag).all()
         return {
             'user': {
-                'email': user.email,
+                'email': user.get_email(),  # Use getter method for email
                 'developer_tag': user.developer_tag
             },
             'entries': [entry.to_dict() for entry in entries]

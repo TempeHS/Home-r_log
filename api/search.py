@@ -252,7 +252,7 @@ def advanced_project_search():
         return jsonify({'error': 'Authentication required'}), 401
     
     try:
-        # Debug: Log all request parameters
+        # debug: Log all request parameters
         logger.info(f"DEBUG: All request args: {dict(request.args)}")
         
         query = Project.query

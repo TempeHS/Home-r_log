@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
 from flask_login import LoginManager, login_required, current_user
 import logging
-from models import db, User, Project, LogEntry, LanguageTag, ForumCategory
+from models import db, User, Project, LogEntry, LanguageTag, ForumCategory, ReactionType
 from api.data_manager import DataManager
 from api.user_manager import UserManager
 from api import api
@@ -158,8 +158,8 @@ def view_entry(entry_id):
         entry = LogEntry.query.get_or_404(entry_id)
         entry_data = entry.to_dict()
         entry_data['user_reaction'] = entry.get_user_reaction(current_user.developer_tag)
-        entry_data['likes_count'] = entry.reactions.filter_by(reaction_type='like').count()
-        entry_data['dislikes_count'] = entry.reactions.filter_by(reaction_type='dislike').count()
+        entry_data['likes_count'] = entry.reactions.filter_by(reaction_type=ReactionType.LIKE).count()
+        entry_data['dislikes_count'] = entry.reactions.filter_by(reaction_type=ReactionType.DISLIKE).count()
         
         app.logger.debug(f"Entry data: {entry_data}")
         return render_template('entry_veiw.html',
@@ -380,5 +380,13 @@ def format_datetime(value):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        
+        # ensure default forums are created
+        try:
+            from migrations.create_default_forums import create_default_forums
+            create_default_forums()
+        except Exception as e:
+            logger.error(f"Error creating default forums: {e}")
+            
     app.run(debug=True) 
     #turn to True for logs

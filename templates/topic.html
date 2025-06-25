@@ -17,8 +17,13 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-0">
+                        {% if project %}
                         <li class="breadcrumb-item"><a href="{{ url_for('view_project', project_name=project.name) }}">{{ project.name }}</a></li>
                         <li class="breadcrumb-item"><a href="{{ url_for('forums.project_forum', project_name=project.name, category=category) }}">{{ category.capitalize() }}</a></li>
+                        {% elif language_tag %}
+                        <li class="breadcrumb-item"><a href="{{ url_for('forums.forum_index') }}">Forums</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('forums.language_forum', language=language_tag.name, category=category) }}">{{ language_tag.name.title() }} - {{ category.capitalize() }}</a></li>
+                        {% endif %}
                         <li class="breadcrumb-item active">{{ topic.title }}</li>
                     </ol>
                 </nav>
@@ -58,7 +63,11 @@
             <div class="card mt-4">
                 <div class="card-body">
                     <h4>Add a Reply</h4>
+                    {% if project %}
                     <form method="POST" action="{{ url_for('forums.add_reply', project_name=project.name, category=category, topic_id=topic.id) }}">
+                    {% elif language_tag %}
+                    <form method="POST" action="{{ url_for('forums.add_language_reply', language=language_tag.name, category=category, topic_id=topic.id) }}">
+                    {% endif %}
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
                             <textarea class="form-control" name="content" rows="5" required></textarea>

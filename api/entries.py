@@ -9,10 +9,28 @@ import logging
 import math
 import json
 from .gogitter import GoGitter
+from functools import wraps
 
 # logging setup for terminal output
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def require_api_key(f):
+    """Decorator to require API key authentication"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        api_key = request.headers.get('X-API-Key')
+        if not api_key:
+            return jsonify({'error': 'API key required'}), 401
+        
+        user = UserManager.authenticate_by_api_key(api_key)
+        if not user:
+            return jsonify({'error': 'Invalid API key'}), 401
+        
+        # Add user to request context
+        request.current_api_user = user
+        return f(*args, **kwargs)
+    return decorated_function
 
 # when get POST request; check auth, create new entries
 @api.route('/entries', methods=['POST'])
@@ -137,11 +155,11 @@ def get_user_stats():
 
     try:
         entries = LogEntry.query.filter_by(developer_tag=user.developer_tag).all()
-        projects = set(entry.project for entry in entries)
+        projects = set(entry.project_name for entry in entries)  # Use correct field name
         
         return jsonify({
             'developer_tag': user.developer_tag,
-            'email': user.email,
+            'email': user.get_email(),  # Use getter method
             'project_count': len(projects),
             'entry_count': len(entries),
             'entries': [entry.to_dict() for entry in entries],

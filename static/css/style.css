@@ -852,11 +852,13 @@ small,
     background-color: var(--dark);
     z-index: 9999;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0.3s ease;
+    overflow: hidden;
 }
 
 .loading-overlay.active {
@@ -870,6 +872,7 @@ small,
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    z-index: 2;
 }
 
 .donut-container {
@@ -877,13 +880,17 @@ small,
     height: 120px;
     position: relative;
     margin-bottom: 20px;
+    flex-shrink: 0;
 }
 
 .donut-svg {
     width: 100%;
     height: 100%;
+    max-width: 120px;
+    max-height: 120px;
     animation: donutFloat 3s ease-in-out infinite;
     filter: drop-shadow(0 10px 20px rgba(255, 140, 0, 0.3));
+    display: block;
 }
 
 @keyframes donutFloat {
@@ -958,14 +965,14 @@ small,
 
 /* Sprinkle container */
 .sprinkles-container {
-    position: fixed;
-    top: calc(50vh - 100px); /* Moved up to better align with donut top */
-    left: 50vw;
-    transform: translate(-50%, -50%);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -150px); /* Position above the donut */
     width: 160px; /* Donut width (120px) + 40px for spawn area */
     height: 200px;
     pointer-events: none;
-    z-index: 9999;
+    z-index: 1;
 }
 
 /* Sprinkles positions */

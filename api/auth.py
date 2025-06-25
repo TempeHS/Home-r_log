@@ -38,11 +38,11 @@ def login():
                 
                 msg = Message('Login Verification Code',
                             sender='noreply@devlog.com',
-                            recipients=[user.email])
+                            recipients=[user.get_email()])  # Use getter method
                 msg.body = f'Your verification code is: {code}'
                 current_app.extensions['mail'].send(msg)
                 
-                logger.info(f"2FA code sent to user: {user.email}")
+                logger.info(f"2FA code sent to user: {user.get_email()}")  # Use getter method
                 return jsonify({
                     'require_2fa': True,
                     'message': 'Please enter verification code',
@@ -84,7 +84,7 @@ def signup():
         login_user(user)
         session['user_id'] = user.id
         session['last_active'] = datetime.utcnow().isoformat()
-        print(f"Signup successful for user: {user.email}")
+        print(f"Signup successful for user: {user.get_email()}")  # Use getter method
         return jsonify({'message': 'Registration successful', 'redirect': '/'})
         
     except Exception as e:
@@ -112,7 +112,7 @@ def enable_2fa():
     
     msg = Message('Your Verification Code',
                   sender='noreply@devlog.com',
-                  recipients=[user.email])
+                  recipients=[user.get_email()])  # Use getter method
     msg.body = f'Your verification code is: {code}'
     current_app.extensions['mail'].send(msg)
     
@@ -168,7 +168,7 @@ def verify_login():
             session.pop('verification_code', None)
             session.pop('temp_user_id', None)
             
-            logger.info(f"User {user.email} successfully verified and logged in")
+            logger.info(f"User {user.get_email()} successfully verified and logged in")  # Use getter method
             return jsonify({'redirect': '/'})
             
         logger.warning("User not found for temp_user_id")

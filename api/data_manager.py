@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 import bcrypt
 import bleach
 import logging
+import hashlib
 
 logger = logging.getLogger(__name__)
 
@@ -136,10 +137,11 @@ class DataManager:
     @staticmethod
     def get_entry_stats(entry_id):
         """Get all stats for an entry including reactions"""
+        from models import LogEntry, ReactionType  # Import here to avoid circular imports
         entry = LogEntry.query.get_or_404(entry_id)
         stats = {
-            'likes_count': entry.reactions.filter_by(reaction_type='like').count(),
-            'dislikes_count': entry.reactions.filter_by(reaction_type='dislike').count(),
+            'likes_count': entry.reactions.filter_by(reaction_type=ReactionType.LIKE).count(),
+            'dislikes_count': entry.reactions.filter_by(reaction_type=ReactionType.DISLIKE).count(),
             'comments_count': entry.comments.count() if hasattr(entry, 'comments') else 0
         }
         return stats
