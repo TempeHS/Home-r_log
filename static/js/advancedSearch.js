@@ -252,7 +252,10 @@ class AdvancedSearchManager {
         this.searchFilters.users = this.getSelectedFilterValues('user');
         this.searchFilters.dateFrom = document.getElementById('dateFrom')?.value || '';
         this.searchFilters.dateTo = document.getElementById('dateTo')?.value || '';
-        this.searchFilters.sortField = document.getElementById('sortField')?.value || 'timestamp';
+        const validSortFields = ['timestamp', 'likes', 'comments', 'project','created_at', 'entries', 'name','replies'
+        ]; // Valid sort field names for security
+        const sortFieldInput = document.getElementById('sortField')?.value || 'timestamp';
+        this.searchFilters.sortField = validSortFields.includes(sortFieldInput) ? sortFieldInput : 'timestamp';
         this.searchFilters.sortOrder = document.getElementById('sortOrder')?.value || 'desc';
     }
 
@@ -299,7 +302,7 @@ class AdvancedSearchManager {
             sql = this.generateForumsSQL();
         }
         
-        preview.innerHTML = sql;
+        preview.textContent = sql;
     }
 
     generateEntriesSQL() {

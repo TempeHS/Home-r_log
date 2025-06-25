@@ -104,7 +104,7 @@ class LoadingAnimation {
                 const href = link.getAttribute('href');
                 
                 // Don't show loading for external links, anchors, or API calls
-                if (href.startsWith('http') || href.startsWith('#') || href.startsWith('javascript:') || href.includes('/api/')) {
+                if (href.startsWith('http') || href.startsWith('#') || href.includes('/api/')) {
                     return;
                 }
 
@@ -170,7 +170,6 @@ class LoadingAnimation {
         if (!href || 
             href.startsWith('http') || 
             href.startsWith('#') || 
-            href.startsWith('javascript:') || 
             href.includes('/api/') ||
             href.includes('download') ||
             link.getAttribute('target') === '_blank') {
