@@ -6,10 +6,12 @@ api = Blueprint('api', __name__, url_prefix='/api')
 from . import auth, entries, search
 from .interactions import interactions_bp
 from .user_manager import user_activity_bp
+from .feed import feed_bp
 
 # Register the interactions blueprint without additional prefix since api already has /api
 api.register_blueprint(interactions_bp, url_prefix='/')
 api.register_blueprint(user_activity_bp, url_prefix='/user')
+api.register_blueprint(feed_bp, url_prefix='/feed')
 
 #basic blueprint for all api routes
 

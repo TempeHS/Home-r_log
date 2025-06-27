@@ -156,7 +156,7 @@
                 new ProjectView();
             } else if (path.includes('/entry/') && !path.includes('/new')) {
                 new EntryViewer();
-            } else if (path.includes('/entry/new/')) {
+            } else if (path.includes('/entry/new/') || path === '/newentry') {
                 new EntryForm();
             } else if (path === '/') {
                 new LogEntry();

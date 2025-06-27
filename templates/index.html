@@ -4,81 +4,80 @@
 
 {% block content %}
 <div class="container mt-4">
-    <form id="entryForm">
-        <div class="form-group mb-3">
-            <label for="project_name" class="form-label">project</label>
-            <select class="form-control" id="project_name" name="project_name" required>
-                <option value="">Select a project</option>
-                {% for project in projects %}
-                    <option value="{{ project.name }}" 
-                            {% if project_name and project_name == project.name %}selected{% endif %}>
-                        {{ project.name }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="form-group mb-3">
-            <label for="title" class="form-label">title</label>
-            <input type="text" 
-                   class="form-control" 
-                   id="title" 
-                   name="title"
-                   required
-                   maxlength="200">
-        </div>
-
-        <div class="form-group mb-3">
-            <label for="commitSelect" class="form-label">related commit</label>
-            <select class="form-control" id="commitSelect" name="commit_sha">
-                <option value="">Select a commit (optional)</option>
-            </select>
-            <small class="form-text text-muted">Select a related commit (optional)</small>
-        </div>
-
-        <div class="form-group mb-3">
-            <label for="content" class="form-label">content</label>
-            <textarea class="form-control" 
-                      id="content" 
-                      name="content"
-                      rows="3" 
-                      required></textarea>
-        </div>
-        <div class="row">
-            <div class="col-md-6">
-                <div class="form-group mb-3">
-                    <label for="start_time" class="form-label">start time</label>
-                    <input type="datetime-local" 
-                           class="form-control" 
-                           id="start_time" 
-                           name="start_time"
-                           required>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="form-group mb-3">
-                    <label for="end_time" class="form-label">end time</label>
-                    <input type="datetime-local" 
-                           class="form-control" 
-                           id="end_time" 
-                           name="end_time"
-                           required>
-                </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="message-box mb-4" role="status">
+                <p class="mono-text">home() :: your_project_dashboard</p>
             </div>
         </div>
-        <button type="submit" class="btn btn-primary">create_entry()</button>
-    </form>
-</div>
-{% endblock %}
+    </div>
 
-{% block message_box %}
-<div class="container mt-4">
-    <div class="message-box">
-        <p class="mono-text">new_entry :: what'd_ya_do?</p>
+    <!-- Stats Row -->
+    <div class="row mb-4">
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="dashboard-stat-card">
+                <div class="stat-label">Projects</div>
+                <div class="stat-value" id="projectCount" aria-live="polite">-</div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="dashboard-stat-card">
+                <div class="stat-label">Entries</div>
+                <div class="stat-value" id="entryCount" aria-live="polite">-</div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="dashboard-stat-card">
+                <div class="stat-label">Total Likes</div>
+                <div class="stat-value" id="totalLikes" aria-live="polite">-</div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3 mb-3">
+            <div class="dashboard-stat-card">
+                <div class="stat-label">Reaction Score</div>
+                <div class="stat-value" id="reactionScore" aria-live="polite">-</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Tabs -->
+    <div class="row">
+        <div class="col-12">
+            <div class="dashboard-tabs">
+                <div class="tab-buttons mb-3">
+                    <button class="dashboard-tab-btn active" data-tab="recent-entries">Recent Entries</button>
+                    <button class="dashboard-tab-btn" data-tab="activity">Forum Activity</button>
+                    <button class="dashboard-tab-btn" data-tab="interactions">Interactions</button>
+                </div>
+                
+                <!-- Recent Entries Tab -->
+                <div class="dashboard-tab-content active" id="recent-entries">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3>Recent Project Entries</h3>
+                        <a href="{{ url_for('projects') }}" class="btn btn-primary btn-sm">View Projects</a>
+                    </div>
+                    <div id="recentEntriesContainer" class="feed-container">
+                        <div class="loading-placeholder">Loading recent entries...</div>
+                    </div>
+                </div>
+                
+                <!-- Activity Tab -->
+                <div class="dashboard-tab-content" id="activity">
+                    <h3>Recent Activity on Your Content</h3>
+                    <div id="activityContainer" class="feed-container">
+                        <div class="loading-placeholder">Loading activity...</div>
+                    </div>
+                </div>
+                
+                <!-- Interactions Tab -->
+                <div class="dashboard-tab-content" id="interactions">
+                    <h3>Recent Comments on Your Entries</h3>
+                    <div id="interactionsContainer" class="feed-container">
+                        <div class="loading-placeholder">Loading interactions...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script type="module" src="{{ url_for('static', filename='js/app.js') }}"></script>
 {% endblock %}

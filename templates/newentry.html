@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Home(r)_Log - New Entry{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <form id="entryForm">
+        <div class="form-group mb-3">
+            <label for="project_name" class="form-label">project</label>
+            <select class="form-control" id="project_name" name="project_name" required>
+                <option value="">Select a project</option>
+                {% for project in projects %}
+                    <option value="{{ project.name }}" 
+                            {% if project_name and project_name == project.name %}selected{% endif %}>
+                        {{ project.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="title" class="form-label">title</label>
+            <input type="text" 
+                   class="form-control" 
+                   id="title" 
+                   name="title"
+                   required
+                   maxlength="200">
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="commitSelect" class="form-label">related commit</label>
+            <select class="form-control" id="commitSelect" name="commit_sha">
+                <option value="">Select a commit (optional)</option>
+            </select>
+            <small class="form-text text-muted">Select a related commit (optional)</small>
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="content" class="form-label">content</label>
+            <textarea class="form-control" 
+                      id="content" 
+                      name="content"
+                      rows="3" 
+                      required></textarea>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="start_time" class="form-label">start time</label>
+                    <input type="datetime-local" 
+                           class="form-control" 
+                           id="start_time" 
+                           name="start_time"
+                           required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="end_time" class="form-label">end time</label>
+                    <input type="datetime-local" 
+                           class="form-control" 
+                           id="end_time" 
+                           name="end_time"
+                           required>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">create_entry()</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block message_box %}
+<div class="container mt-4">
+    <div class="message-box">
+        <p class="mono-text">new_entry :: what'd_ya_do?</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% endblock %}

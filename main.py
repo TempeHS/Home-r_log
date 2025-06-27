@@ -116,9 +116,15 @@ def check_auth():
 @app.route('/')
 @login_required  # Add login requirement
 def index():
+    # Redirect to home page instead of showing entry form
+    return redirect(url_for('home'))
+
+@app.route('/newentry')
+@login_required
+def new_entry_form():
     project_name = request.args.get('project_name')
-    projects = current_user.projects.all()  # Now safe to access projects
-    return render_template('index.html', projects=projects, project_name=project_name)
+    projects = current_user.projects.all()
+    return render_template('newentry.html', projects=projects, project_name=project_name)
 
 @app.route('/signup')
 def signup():
@@ -149,7 +155,9 @@ def privacy():
 def home():
     if not check_auth():
         return redirect(url_for('login'))
-    return render_template('home.html')
+    # Load dashboard data for home page
+    projects = current_user.projects.all() if current_user.is_authenticated else []
+    return render_template('home.html', projects=projects)
 
 @app.route('/entry/<int:entry_id>')
 @login_required

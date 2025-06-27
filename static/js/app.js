@@ -534,69 +534,222 @@ document.addEventListener('DOMContentLoaded', () => {
 
 class HomeManager {
     constructor() {
-        this.loadProjectData();
+        this.bindTabEvents();
+        this.loadDashboardData();
     }
 
-    async loadProjectData() {
+    bindTabEvents() {
+        // Handle tab switching
+        const tabButtons = document.querySelectorAll('.dashboard-tab-btn');
+        tabButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tabId = button.getAttribute('data-tab');
+                this.switchTab(tabId);
+            });
+        });
+    }
+
+    switchTab(tabId) {
+        // Update active tab button
+        document.querySelectorAll('.dashboard-tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+
+        // Update active tab content
+        document.querySelectorAll('.dashboard-tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        document.getElementById(tabId).classList.add('active');
+
+        // Load tab content
+        this.loadTabContent(tabId);
+    }
+
+    async loadDashboardData() {
         try {
-            const response = await fetch('/api/entries/user-stats');
+            const response = await fetch('/api/feed/dashboard');
             const data = await response.json();
             
-            if (!response.ok) throw new Error(data.error);
+            if (!response.ok) throw new Error(data.error || 'Failed to load dashboard data');
             
             // Update stats display
-            document.getElementById('projectCount').textContent = data.project_count;
-            document.getElementById('entryCount').textContent = data.entry_count;
-            document.getElementById('devTag').textContent = data.developer_tag;
+            this.updateStats(data.user_stats, data.reaction_stats);
             
-            // Group entries by project
-            const projectGroups = this.groupEntriesByProject(data.entries);
-            this.displayProjectCards(projectGroups);
+            // Load initial tab content (recent entries)
+            this.displayRecentEntries(data.recent_entries);
+            
+            // Store data for other tabs
+            this.dashboardData = data;
+            
         } catch (error) {
-            showNotification('Failed to load projects', 'error');
+            console.error('Failed to load dashboard data:', error);
+            showNotification('Failed to load dashboard data', 'danger');
         }
     }
 
-    groupEntriesByProject(entries) {
-        return entries.reduce((groups, entry) => {
-            if (!groups[entry.project]) {
-                groups[entry.project] = [];
-            }
-            groups[entry.project].push(entry);
-            return groups;
-        }, {});
+    updateStats(userStats, reactionStats) {
+        // Update stat cards
+        const projectCount = document.getElementById('projectCount');
+        const entryCount = document.getElementById('entryCount');
+        const totalLikes = document.getElementById('totalLikes');
+        const reactionScore = document.getElementById('reactionScore');
+
+        if (projectCount) projectCount.textContent = userStats.project_count || 0;
+        if (entryCount) entryCount.textContent = userStats.entry_count || 0;
+        if (totalLikes) totalLikes.textContent = reactionStats.total_likes || 0;
+        if (reactionScore) reactionScore.textContent = reactionStats.total_score || 0;
     }
 
-    displayProjectCards(projectGroups) {
-        const container = document.getElementById('projectCards');
+    async loadTabContent(tabId) {
+        if (!this.dashboardData) {
+            await this.loadDashboardData();
+            return;
+        }
+
+        try {
+            switch (tabId) {
+                case 'recent-entries':
+                    this.displayRecentEntries(this.dashboardData.recent_entries);
+                    break;
+                case 'activity':
+                    this.displayActivity(this.dashboardData.recent_topic_replies);
+                    break;
+                case 'interactions':
+                    this.displayInteractions(this.dashboardData.recent_entry_comments);
+                    break;
+            }
+        } catch (error) {
+            console.error(`Failed to load tab content for ${tabId}:`, error);
+        }
+    }
+
+    displayRecentEntries(entries) {
+        const container = document.getElementById('recentEntriesContainer');
         if (!container) return;
 
-        container.innerHTML = Object.entries(projectGroups).map(([project, entries]) => `
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">${escapeHtml(project)}</h5>
-                        <div class="project-entries">
-                            ${entries.slice(0, 3).map(entry => this.createEntryPreview(entry)).join('')}
-                            ${entries.length > 3 ? `
-                                <button class="btn btn-outline-primary mt-2" 
-                                        onclick="event.stopPropagation(); this.closest('.project-entries').classList.toggle('collapsed')">
-                                    Show ${entries.length - 3} more entries
-                                </button>
-                            ` : ''}
-                        </div>
+        if (!entries || entries.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <p>No recent entries found.</p>
+                    <a href="/newentry" class="btn btn-primary">Create your first entry</a>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = entries.map(entry => this.createEntryCard(entry)).join('');
+    }
+
+    displayActivity(topicReplies) {
+        const container = document.getElementById('activityContainer');
+        if (!container) return;
+
+        if (!topicReplies || topicReplies.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <p>No recent forum activity found.</p>
+                    <a href="/forums" class="btn btn-outline-primary">Visit Forums</a>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = topicReplies.map(reply => `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="card-subtitle text-muted">
+                            Reply to: <strong>${escapeHtml(reply.topic_title)}</strong>
+                        </h6>
+                        <small class="text-muted">${new Date(reply.created_at).toLocaleDateString()}</small>
+                    </div>
+                    <p class="card-text">${escapeHtml(reply.content)}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            By: ${escapeHtml(reply.author_id)} in ${escapeHtml(reply.category)}
+                            ${reply.language_name ? ` (${reply.language_name})` : ''}
+                        </small>
+                        <a href="/forums/topic/${reply.topic_id}" class="btn btn-sm btn-outline-primary">View Topic</a>
                     </div>
                 </div>
             </div>
         `).join('');
     }
 
-    createEntryPreview(entry) {
+    displayInteractions(entryComments) {
+        const container = document.getElementById('interactionsContainer');
+        if (!container) return;
+
+        if (!entryComments || entryComments.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <p>No recent comments on your entries.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = entryComments.map(comment => `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="card-subtitle text-muted">
+                            Comment on: <strong>${escapeHtml(comment.entry_title)}</strong>
+                        </h6>
+                        <small class="text-muted">${new Date(comment.timestamp).toLocaleDateString()}</small>
+                    </div>
+                    <p class="card-text">${escapeHtml(comment.content)}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            By: ${escapeHtml(comment.user_id)} on ${escapeHtml(comment.project_name)}
+                        </small>
+                        <a href="/entry/${comment.entry_id}" class="btn btn-sm btn-outline-primary">View Entry</a>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    createEntryCard(entry) {
+        const likesCount = entry.likes_count || 0;
+        const dislikesCount = entry.dislikes_count || 0;
+        const commentsCount = entry.comments_count || 0;
+        
         return `
-            <div class="entry-preview mb-3">
-                <small>${new Date(entry.timestamp).toLocaleDateString()}</small>
-                <p class="mb-1">${escapeHtml(clipContent(entry.content, 10))}</p>
-                <a href="/entry/${entry.id}" class="stretched-link"></a>
+            <div class="card mb-3 entry-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title text-truncate">${escapeHtml(entry.title || 'Untitled Entry')}</h5>
+                        <small class="text-muted">${new Date(entry.timestamp).toLocaleDateString()}</small>
+                    </div>
+                    <h6 class="card-subtitle mb-2 text-muted">
+                        Project: ${escapeHtml(entry.project_name)} • ${entry.time_worked} minutes
+                    </h6>
+                    <p class="card-text">${escapeHtml(clipContent(entry.content, 3))}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="entry-stats">
+                            <small class="text-muted d-flex align-items-center gap-3">
+                                <span class="d-flex align-items-center">
+                                    <img src="/static/images/like.svg" alt="likes" width="16" height="16" class="me-1">
+                                    ${likesCount}
+                                </span>
+                                ${dislikesCount > 0 ? `
+                                <span class="d-flex align-items-center">
+                                    <img src="/static/images/dislike.svg" alt="dislikes" width="16" height="16" class="me-1">
+                                    ${dislikesCount}
+                                </span>
+                                ` : ''}
+                                <span class="d-flex align-items-center">
+                                    <img src="/static/images/comment.svg" alt="comments" width="16" height="16" class="me-1">
+                                    ${commentsCount}
+                                </span>
+                            </small>
+                        </div>
+                        <a href="/entry/${entry.id}" class="btn btn-sm btn-primary">View Entry</a>
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -1301,6 +1454,10 @@ function clipContent(content, maxLines = 3) {
 }
 
 function createEntryCard(entry) {
+    const likesCount = entry.likes_count || 0;
+    const dislikesCount = entry.dislikes_count || 0;
+    const commentsCount = entry.comments_count || 0;
+    
     return `
         <div class="card mb-3 entry-card">
             <div class="card-body">
@@ -1309,13 +1466,34 @@ function createEntryCard(entry) {
                     ${new Date(entry.timestamp).toLocaleString()} - ${escapeHtml(entry.developer_tag)}
                 </h6>
                 <p class="card-text">${escapeHtml(clipContent(entry.content))}</p>
-                <div class="entry-details">
+                <div class="entry-details mb-3">
                     <small>
                         <div>time worked: ${entry.time_worked} minutes</div>
                         <div>start: ${new Date(entry.start_time).toLocaleString()}</div>
                         <div>end: ${new Date(entry.end_time).toLocaleString()}</div>
                         ${entry.repository_url ? `<div><a href="${escapeHtml(entry.repository_url)}" target="_blank">repository</a></div>` : ''}
                     </small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="entry-stats">
+                        <small class="text-muted d-flex align-items-center gap-3">
+                            <span class="d-flex align-items-center">
+                                <img src="/static/images/like.svg" alt="likes" width="16" height="16" class="me-1">
+                                ${likesCount}
+                            </span>
+                            ${dislikesCount > 0 ? `
+                            <span class="d-flex align-items-center">
+                                <img src="/static/images/dislike.svg" alt="dislikes" width="16" height="16" class="me-1">
+                                ${dislikesCount}
+                            </span>
+                            ` : ''}
+                            <span class="d-flex align-items-center">
+                                <img src="/static/images/comment.svg" alt="comments" width="16" height="16" class="me-1">
+                                ${commentsCount}
+                            </span>
+                        </small>
+                    </div>
+                    ${entry.id ? `<a href="/entry/${entry.id}" class="btn btn-sm btn-primary">View Entry</a>` : ''}
                 </div>
             </div>
         </div>
@@ -1329,14 +1507,18 @@ function createEntryCard(entry) {
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
     
-    // Initialize appropriate class based on current path
-    if (path.includes('/project/')) {
-        initializeProjectPage();
-    } else if (path.includes('/entry/') && !path.includes('/new')) {
-        new EntryViewer();
-    } else if (path.includes('/entry/new/')) {
-        new EntryForm();
-    } else if (path === '/') {
+    // Initialize HomeManager for dashboard pages (home.html)
+    if ((path === '/' || path === '/home') && document.querySelector('.dashboard-tabs')) {
+        new HomeManager();
+    }
+    
+    // Initialize ProfileManager if on profile page
+    if (document.getElementById('apiKeySection')) {
+        window.profileManager = new ProfileManager();
+    }
+    
+    // Initialize basic LogEntry for entry form on root path without dashboard
+    if (path === '/' && document.getElementById('entryForm') && !document.querySelector('.dashboard-tabs')) {
         new LogEntry();
     }
 });
@@ -1392,19 +1574,6 @@ function initializeProjectPage() {
         });
     });
 }
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
-    const entryForm = document.getElementById('entryForm');
-    if (entryForm) {
-        new LogEntry();
-    }
-});
-document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('apiKeySection')) {
-        window.profileManager = new ProfileManager();
-    }
-});
 
 // Initialize loading animation
 document.addEventListener('DOMContentLoaded', () => {
