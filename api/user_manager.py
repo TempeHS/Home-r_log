@@ -5,6 +5,9 @@ from .data_manager import DataManager
 from flask_login import login_required, current_user
 import bcrypt
 import hashlib
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Create API blueprint for user activity
 user_activity_bp = Blueprint('user_activity', __name__)
@@ -204,17 +207,114 @@ class UserManager:
 
     @staticmethod
     def download_user_data(user):
+        # Get all user data
         entries = LogEntry.query.filter_by(developer_tag=user.developer_tag).all()
+        forum_topics = ForumTopic.query.filter_by(author_id=user.developer_tag).all()
+        forum_replies = ForumReply.query.filter_by(author_id=user.developer_tag).all()
+        entry_comments = Comment.query.filter_by(user_id=user.developer_tag).all()
+        
         return {
             'user': {
                 'email': user.get_email(),  # Use getter method for email
-                'developer_tag': user.developer_tag
+                'developer_tag': user.developer_tag,
+                'created_at': user.id,  # Using id as a proxy since we don't have created_at
+                'two_fa_enabled': user.two_fa_enabled,
+                'api_enabled': user.api_enabled
             },
-            'entries': [entry.to_dict() for entry in entries]
+            'entries': [entry.to_dict() for entry in entries],
+            'forum_posts': [
+                {
+                    'id': topic.id,
+                    'title': topic.title,
+                    'content': topic.content,
+                    'created_at': topic.created_at.isoformat(),
+                    'updated_at': topic.updated_at.isoformat(),
+                    'category_id': topic.category_id,
+                    'project_name': topic.project_name
+                } for topic in forum_topics
+            ],
+            'forum_replies': [
+                {
+                    'id': reply.id,
+                    'content': reply.content,
+                    'created_at': reply.created_at.isoformat(),
+                    'topic_id': reply.topic_id,
+                    'project_name': reply.project_name
+                } for reply in forum_replies
+            ],
+            'entry_comments': [
+                {
+                    'id': comment.id,
+                    'content': comment.content,
+                    'timestamp': comment.timestamp.isoformat(),
+                    'entry_id': comment.entry_id,
+                    'parent_id': comment.parent_id
+                } for comment in entry_comments
+            ],
+            'projects': [project.to_dict() for project in user.projects],
+            'export_date': datetime.utcnow().isoformat()
         }
 
     @staticmethod
     def delete_user_account(user):
-        LogEntry.query.filter_by(developer_tag=user.developer_tag).delete()
-        db.session.delete(user)
-        db.session.commit()
+        try:
+            # Delete all user-related data in proper order (child records first)
+            
+            # Delete entry reactions
+            from models import EntryReaction
+            EntryReaction.query.filter_by(user_id=user.developer_tag).delete()
+            
+            # Delete comments on entries
+            Comment.query.filter_by(user_id=user.developer_tag).delete()
+            
+            # Delete forum replies
+            ForumReply.query.filter_by(author_id=user.developer_tag).delete()
+            
+            # Delete forum topics
+            ForumTopic.query.filter_by(author_id=user.developer_tag).delete()
+            
+            # Delete log entries
+            LogEntry.query.filter_by(developer_tag=user.developer_tag).delete()
+            
+            # Remove user from project memberships by deleting from association table
+            from models import project_members
+            db.session.execute(
+                project_members.delete().where(
+                    project_members.c.user_id == user.developer_tag
+                )
+            )
+            
+            # Delete the user account
+            db.session.delete(user)
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error deleting user account: {str(e)}")
+            return False
+
+@user_activity_bp.route('/data', methods=['GET'])
+@login_required
+def download_user_data():
+    """Download all user data as JSON"""
+    try:
+        user_data = UserManager.download_user_data(current_user)
+        return jsonify(user_data)
+    except Exception as e:
+        logger.error(f"Error downloading user data: {str(e)}")
+        return jsonify({'error': 'Failed to download user data'}), 500
+
+@user_activity_bp.route('/data', methods=['DELETE'])
+@login_required
+def delete_user_account():
+    """Delete user account and all associated data"""
+    try:
+        if UserManager.delete_user_account(current_user):
+            # Clear the session
+            session.clear()
+            return jsonify({'message': 'Account deleted successfully'}), 200
+        else:
+            return jsonify({'error': 'Failed to delete account'}), 500
+    except Exception as e:
+        logger.error(f"Error deleting user account: {str(e)}")
+        return jsonify({'error': 'Failed to delete account'}), 500

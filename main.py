@@ -5,7 +5,7 @@ from flask_login import LoginManager, login_required, current_user
 import logging
 from models import db, User, Project, LogEntry, LanguageTag, ForumCategory, ReactionType
 from api.data_manager import DataManager
-from api.user_manager import UserManager
+from api.user_manager import UserManager, user_activity_bp
 from api import api
 import os
 from config import Config
@@ -89,6 +89,7 @@ db.init_app(app)
 
 # register blueprints
 app.register_blueprint(api, url_prefix='/api')
+app.register_blueprint(user_activity_bp, url_prefix='/api/user')
 app.register_blueprint(forums_bp, url_prefix='/forums')
 
 # initialize migrations

@@ -816,33 +816,74 @@ class PrivacyManager {
 
     async handleDownload() {
         try {
+            LoadingAnimation.showLoading();
             const response = await fetch('/api/user/data');
-            const blob = await response.blob();
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const userData = await response.json();
+            
+            // Create and download the JSON file
+            const dataStr = JSON.stringify(userData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'my_devlog_data.json';
+            a.download = `devlog_data_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
             a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showNotification('Data downloaded successfully', 'success');
         } catch (error) {
-            showNotification('failed to download data', 'error');
+            console.error('Download error:', error);
+            showNotification('Failed to download data', 'danger');
+        } finally {
+            LoadingAnimation.hideLoading();
         }
     }
 
     async handleDelete() {
-        if (confirm('are you sure? this action cannot be undone')) {
-            try {
-                const response = await fetch('/api/user/data', {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    }
-                });
-                if (response.ok) {
-                    window.location.href = '/login';
+        const confirmText = 'Are you absolutely sure you want to delete your account? This action cannot be undone and will permanently remove all your data including:\n\n• All log entries\n• Forum posts and replies\n• Comments\n• Project memberships\n\nType "DELETE" to confirm:';
+        
+        const userInput = prompt(confirmText);
+        
+        if (userInput !== 'DELETE') {
+            showNotification('Account deletion cancelled', 'info');
+            return;
+        }
+        
+        try {
+            LoadingAnimation.showLoading();
+            
+            // Get CSRF token
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            
+            const response = await fetch('/api/user/data', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(csrfToken && { 'X-CSRF-TOKEN': csrfToken })
                 }
-            } catch (error) {
-                showNotification('failed to delete account', 'error');
+            });
+            
+            if (response.ok) {
+                showNotification('Account deleted successfully. Redirecting...', 'success');
+                setTimeout(() => {
+                    window.location.href = '/login';
+                }, 2000);
+            } else {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || 'Failed to delete account');
             }
+        } catch (error) {
+            console.error('Delete error:', error);
+            showNotification(`Failed to delete account: ${error.message}`, 'danger');
+        } finally {
+            LoadingAnimation.hideLoading();
         }
     }
 }
@@ -1515,6 +1556,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize ProfileManager if on profile page
     if (document.getElementById('apiKeySection')) {
         window.profileManager = new ProfileManager();
+    }
+    
+    // Initialize PrivacyManager if on privacy page
+    if (path === '/privacy' && (document.getElementById('downloadData') || document.getElementById('deleteAccount'))) {
+        new PrivacyManager();
     }
     
     // Initialize basic LogEntry for entry form on root path without dashboard
